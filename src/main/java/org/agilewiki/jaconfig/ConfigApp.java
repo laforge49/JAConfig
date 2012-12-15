@@ -23,17 +23,44 @@
  */
 package org.agilewiki.jaconfig;
 
+import org.agilewiki.jasocket.JASApplication;
+import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.node.Node;
+import org.agilewiki.jfile.JFileFactories;
+import org.agilewiki.jfile.transactions.db.inMemory.IMDB;
 
-public class JACNode extends Node {
+import java.io.File;
+import java.nio.file.Path;
 
-    public JACNode(int threadCount) throws Exception {
-        super(threadCount);
+public class ConfigApp implements JASApplication {
+    private Node node;
+    private IMDB configIMDB;
+
+    @Override
+    public void create(Node node, String[] args, JASocketFactories factory) throws Exception {
+        this.node = node;
+        (new JFileFactories()).initialize(factory);
+    }
+
+    @Override
+    public void open() throws Exception {
+        Path dbPath = new File(node.nodeDirectory(), "configDB").toPath();
+        configIMDB = new IMDB(node.mailboxFactory(), node.agentChannelManager(), dbPath);
+        ConfigDB configDB = new ConfigDB(node, 1024 * 1024, configIMDB);
+        configDB.initialize(node.mailboxFactory().createAsyncMailbox(), node.agentChannelManager());
+        OpenConfigDB.req.sendEvent(configDB);
+    }
+
+    @Override
+    public void close() {
+        if (configIMDB != null)
+            configIMDB.closeDbFile();
     }
 
     public static void main(String[] args) throws Exception {
-        JACNode node = new JACNode(100);
+        Node node = new Node(100);
         try {
+            node.addApplication(new ConfigApp());
             node.process(args);
         } catch (Exception ex) {
             node.mailboxFactory().close();
