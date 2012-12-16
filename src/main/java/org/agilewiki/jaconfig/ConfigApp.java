@@ -23,7 +23,7 @@
  */
 package org.agilewiki.jaconfig;
 
-import org.agilewiki.jasocket.Closable;
+import org.agilewiki.jactor.Closable;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jfile.JFileFactories;
 import org.agilewiki.jfile.transactions.db.inMemory.IMDB;
@@ -37,7 +37,7 @@ public class ConfigApp implements Closable {
 
     public void create(Node node) throws Exception {
         this.node = node;
-        node.addClosable(this);
+        node.mailboxFactory().addClosable(this);
         (new JFileFactories()).initialize(node.factory());
         Path dbPath = new File(node.nodeDirectory(), "configDB").toPath();
         configIMDB = new IMDB(node.mailboxFactory(), node.agentChannelManager(), dbPath);
