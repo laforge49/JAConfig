@@ -23,8 +23,7 @@
  */
 package org.agilewiki.jaconfig;
 
-import org.agilewiki.jasocket.JASApplication;
-import org.agilewiki.jasocket.JASocketFactories;
+import org.agilewiki.jasocket.Closable;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jfile.JFileFactories;
 import org.agilewiki.jfile.transactions.db.inMemory.IMDB;
@@ -32,18 +31,14 @@ import org.agilewiki.jfile.transactions.db.inMemory.IMDB;
 import java.io.File;
 import java.nio.file.Path;
 
-public class ConfigApp implements JASApplication {
+public class ConfigApp implements Closable {
     private Node node;
     private IMDB configIMDB;
 
-    @Override
-    public void create(Node node, String[] args, JASocketFactories factory) throws Exception {
+    public void create(Node node) throws Exception {
         this.node = node;
-        (new JFileFactories()).initialize(factory);
-    }
-
-    @Override
-    public void open() throws Exception {
+        node.addClosable(this);
+        (new JFileFactories()).initialize(node.factory());
         Path dbPath = new File(node.nodeDirectory(), "configDB").toPath();
         configIMDB = new IMDB(node.mailboxFactory(), node.agentChannelManager(), dbPath);
         ConfigDB configDB = new ConfigDB(node, 1024 * 1024, configIMDB);
@@ -58,10 +53,11 @@ public class ConfigApp implements JASApplication {
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new Node(100);
+        Node node = new Node(args, 100);
         try {
-            node.addApplication(new ConfigApp());
-            node.process(args);
+            ConfigApp configApp = new ConfigApp();
+            node.process();
+            configApp.create(node);
         } catch (Exception ex) {
             node.mailboxFactory().close();
             throw ex;
