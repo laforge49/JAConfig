@@ -24,32 +24,54 @@
 package org.agilewiki.jaconfig;
 
 import org.agilewiki.jactor.RP;
-import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jasocket.application.Application;
 import org.agilewiki.jasocket.node.Node;
-import org.agilewiki.jasocket.server.RegisterResource;
+import org.agilewiki.jfile.JFileFactories;
 import org.agilewiki.jfile.transactions.db.OpenDbFile;
 import org.agilewiki.jfile.transactions.db.inMemory.IMDB;
-import org.agilewiki.jid.Jid;
+import org.agilewiki.jid.collection.vlenc.BListJid;
+import org.agilewiki.jid.scalar.vlens.string.StringJid;
 
-public class ConfigDB extends JLPCActor {
-    private Node node;
-    private int maxSize;
+import java.io.File;
+import java.nio.file.Path;
+
+public class ConfigServer extends Application {
     private IMDB configIMDB;
 
-    public ConfigDB(Node node, int maxSize, IMDB configIMDB) {
-        this.node = node;
-        this.maxSize = maxSize;
-        this.configIMDB = configIMDB;
+    @Override
+    protected String applicationName() {
+        return "configServer";
     }
 
-    public void start(RP<Jid> rp) throws Exception {
-        OpenDbFile openDbFile = new OpenDbFile(maxSize);
-        openDbFile.send(this, configIMDB, new RP<Object>() {
+    @Override
+    protected void startApplication(final BListJid<StringJid> out, final RP rp) throws Exception {
+        (new JFileFactories()).initialize(node().factory());
+        Path dbPath = new File(node().nodeDirectory(), "configDB").toPath();
+        configIMDB = new IMDB(getMailboxFactory(), node().agentChannelManager(), dbPath);
+        OpenDbFile openDbFile = new OpenDbFile(1024 * 1024);
+        openDbFile.send(this, configIMDB, new RP() {
             @Override
             public void processResponse(Object response) throws Exception {
-                (new RegisterResource("configDB", ConfigDB.this)).sendEvent(ConfigDB.this, node.agentChannelManager());
+                ConfigServer.super.startApplication(out, rp);
             }
         });
-        rp.processResponse(null);
+    }
+
+    @Override
+    public void close() {
+        if (configIMDB != null)
+            configIMDB.closeDbFile();
+        super.close();
+    }
+
+    public static void main(String[] args) throws Exception {
+        Node node = new Node(args, 100);
+        try {
+            node.process();
+            node.startup(ConfigServer.class, "");
+        } catch (Exception ex) {
+            node.mailboxFactory().close();
+            throw ex;
+        }
     }
 }
