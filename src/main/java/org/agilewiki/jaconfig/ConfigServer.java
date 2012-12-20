@@ -24,7 +24,7 @@
 package org.agilewiki.jaconfig;
 
 import org.agilewiki.jactor.RP;
-import org.agilewiki.jasocket.application.Application;
+import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jfile.JFileFactories;
 import org.agilewiki.jfile.transactions.db.OpenDbFile;
@@ -35,16 +35,16 @@ import org.agilewiki.jid.scalar.vlens.string.StringJid;
 import java.io.File;
 import java.nio.file.Path;
 
-public class ConfigServer extends Application {
+public class ConfigServer extends Server {
     private IMDB configIMDB;
 
     @Override
-    protected String applicationName() {
+    protected String serviceName() {
         return "configServer";
     }
 
     @Override
-    protected void startApplication(final BListJid<StringJid> out, final RP rp) throws Exception {
+    protected void startService(final BListJid<StringJid> out, final RP rp) throws Exception {
         (new JFileFactories()).initialize(node().factory());
         Path dbPath = new File(node().nodeDirectory(), "configDB").toPath();
         configIMDB = new IMDB(getMailboxFactory(), node().agentChannelManager(), dbPath);
@@ -52,7 +52,7 @@ public class ConfigServer extends Application {
         openDbFile.send(this, configIMDB, new RP() {
             @Override
             public void processResponse(Object response) throws Exception {
-                ConfigServer.super.startApplication(out, rp);
+                ConfigServer.super.startService(out, rp);
             }
         });
     }
