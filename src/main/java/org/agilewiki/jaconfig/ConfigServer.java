@@ -24,13 +24,12 @@
 package org.agilewiki.jaconfig;
 
 import org.agilewiki.jactor.RP;
+import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jfile.JFileFactories;
 import org.agilewiki.jfile.transactions.db.OpenDbFile;
 import org.agilewiki.jfile.transactions.db.inMemory.IMDB;
-import org.agilewiki.jid.collection.vlenc.BListJid;
-import org.agilewiki.jid.scalar.vlens.string.StringJid;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -44,7 +43,7 @@ public class ConfigServer extends Server {
     }
 
     @Override
-    protected void startService(final BListJid<StringJid> out, final RP rp) throws Exception {
+    protected void startService(final PrintJid out, final RP rp) throws Exception {
         (new JFileFactories()).initialize(node().factory());
         Path dbPath = new File(node().nodeDirectory(), "configDB").toPath();
         configIMDB = new IMDB(getMailboxFactory(), node().agentChannelManager(), dbPath);
