@@ -38,12 +38,12 @@ public class ConfigServer extends Server {
     private IMDB configIMDB;
 
     @Override
-    protected String serviceName() {
+    protected String serverName() {
         return "configServer";
     }
 
     @Override
-    protected void startService(final PrintJid out, final RP rp) throws Exception {
+    protected void startServer(final PrintJid out, final RP rp) throws Exception {
         (new JFileFactories()).initialize(node().factory());
         Path dbPath = new File(node().nodeDirectory(), "configDB").toPath();
         configIMDB = new IMDB(getMailboxFactory(), node().agentChannelManager(), dbPath);
@@ -51,7 +51,7 @@ public class ConfigServer extends Server {
         openDbFile.send(this, configIMDB, new RP() {
             @Override
             public void processResponse(Object response) throws Exception {
-                ConfigServer.super.startService(out, rp);
+                ConfigServer.super.startServer(out, rp);
             }
         });
     }
