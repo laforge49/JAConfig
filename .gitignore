@@ -15,3 +15,5 @@ AgileWiki5/_pasted_code_/*
 *~
 *.jnl
 *.db
+*.jalog
+*.jadb
