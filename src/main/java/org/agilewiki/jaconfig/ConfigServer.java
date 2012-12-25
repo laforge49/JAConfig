@@ -27,13 +27,16 @@ import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.jid.PrintJid;
+import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
+import org.agilewiki.jasocket.server.ServerCommand;
 import org.agilewiki.jfile.JFile;
 import org.agilewiki.jfile.JFileFactories;
 import org.agilewiki.jfile.block.Block;
 import org.agilewiki.jfile.block.LA32Block;
 import org.agilewiki.jid.JidFactories;
+import org.agilewiki.jid.collection.vlenc.map.MapEntry;
 import org.agilewiki.jid.collection.vlenc.map.StringBMapJid;
 import org.agilewiki.jid.collection.vlenc.map.StringBMapJidFactory;
 import org.agilewiki.jid.scalar.vlens.actor.RootJid;
@@ -88,6 +91,23 @@ public class ConfigServer extends Server {
         rootJid = block0.getRootJid(getMailbox(), getParent());
         rootJid.makeValue(NAME_TIME_VALUE_TYPE);
         map = (StringBMapJid<TimeValueJid>) rootJid.getValue();
+        registerServerCommand(new ServerCommand("values", "list all names and their assigned values") {
+            @Override
+            public void eval(String args, PrintJid out, RP<PrintJid> rp) throws Exception {
+                int s = map.size();
+                int i = 0;
+                while (i < s) {
+                    MapEntry<String, TimeValueJid> me = map.iGet(i);
+                    String name = me.getKey();
+                    TimeValueJid tv = me.getValue();
+                    String value = tv.getValue();
+                    out.println(name + " = " + value);
+                    i += 1;
+                }
+                rp.processResponse(out);
+            }
+        });
+        super.startServer(out, rp);
     }
 
     @Override
@@ -108,6 +128,7 @@ public class ConfigServer extends Server {
         try {
             node.process();
             node.startup(ConfigServer.class, "");
+            (new ConsoleApp()).create(node);
         } catch (Exception ex) {
             node.mailboxFactory().close();
             throw ex;
