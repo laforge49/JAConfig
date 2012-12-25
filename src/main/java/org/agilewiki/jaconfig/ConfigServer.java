@@ -57,7 +57,7 @@ public class ConfigServer extends Server {
         (new JFileFactories()).initialize(getParent());
         Path dbPath = new File(node().nodeDirectory(), "config.db").toPath();
         dbFile = new JFile();
-        dbFile.initialize(getMailboxFactory().createAsyncMailbox());
+        dbFile.initialize(getMailbox());
         dbFile.open(
                 dbPath,
                 StandardOpenOption.READ,
@@ -72,10 +72,10 @@ public class ConfigServer extends Server {
             block0.setRootJid(
                     (RootJid) factory.newActor(
                             JidFactories.ROOT_JID_TYPE,
-                            getMailboxFactory().createMailbox(),
+                            getMailbox(),
                             dbFile));
         }
-        rootJid = block0.getRootJid(getMailboxFactory().createMailbox(), getParent());
+        rootJid = block0.getRootJid(getMailbox(), getParent());
     }
 
     @Override
@@ -87,6 +87,10 @@ public class ConfigServer extends Server {
         super.close();
     }
 
+    protected Block newDbBlock() {
+        return new LA32Block();
+    }
+
     public static void main(String[] args) throws Exception {
         Node node = new Node(args, 100);
         try {
@@ -96,9 +100,5 @@ public class ConfigServer extends Server {
             node.mailboxFactory().close();
             throw ex;
         }
-    }
-
-    protected Block newDbBlock() {
-        return new LA32Block();
     }
 }
