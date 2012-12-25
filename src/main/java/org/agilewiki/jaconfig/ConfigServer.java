@@ -25,6 +25,7 @@ package org.agilewiki.jaconfig;
 
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
+import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
@@ -33,6 +34,8 @@ import org.agilewiki.jfile.JFileFactories;
 import org.agilewiki.jfile.block.Block;
 import org.agilewiki.jfile.block.LA32Block;
 import org.agilewiki.jid.JidFactories;
+import org.agilewiki.jid.collection.vlenc.map.StringBMapJid;
+import org.agilewiki.jid.collection.vlenc.map.StringBMapJidFactory;
 import org.agilewiki.jid.scalar.vlens.actor.RootJid;
 
 import java.io.File;
@@ -42,6 +45,10 @@ import java.nio.file.StandardOpenOption;
 public class ConfigServer extends Server {
     private JFile dbFile;
     private RootJid rootJid;
+    public static String NAME_TIME_VALUE_TYPE = "nameTimeValue";
+    public static StringBMapJidFactory nameTimeValueMapFactory = new StringBMapJidFactory(
+            NAME_TIME_VALUE_TYPE, TimeValueJidFactory.fac);
+    private StringBMapJid<TimeValueJid> map;
 
     @Override
     protected String serverName() {
@@ -55,10 +62,12 @@ public class ConfigServer extends Server {
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
         (new JFileFactories()).initialize(getParent());
-        node().factory().registerActorFactory(TimeValueJidFactory.fac);
+        JASocketFactories f = node().factory();
+        f.registerActorFactory(TimeValueJidFactory.fac);
+        f.registerActorFactory(nameTimeValueMapFactory);
         Path dbPath = new File(node().nodeDirectory(), "config.db").toPath();
         dbFile = new JFile();
-        dbFile.initialize(getMailbox());
+        dbFile.initialize(getMailbox(), getParent());
         dbFile.open(
                 dbPath,
                 StandardOpenOption.READ,
@@ -77,6 +86,8 @@ public class ConfigServer extends Server {
                             dbFile));
         }
         rootJid = block0.getRootJid(getMailbox(), getParent());
+        rootJid.makeValue(NAME_TIME_VALUE_TYPE);
+        map = (StringBMapJid<TimeValueJid>) rootJid.getValue();
     }
 
     @Override
