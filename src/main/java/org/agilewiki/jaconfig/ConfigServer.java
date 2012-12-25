@@ -55,6 +55,7 @@ public class ConfigServer extends Server {
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
         (new JFileFactories()).initialize(getParent());
+        node().factory().registerActorFactory(TimeValueJidFactory.fac);
         Path dbPath = new File(node().nodeDirectory(), "config.db").toPath();
         dbFile = new JFile();
         dbFile.initialize(getMailbox());
