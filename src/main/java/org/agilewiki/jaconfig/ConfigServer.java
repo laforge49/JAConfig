@@ -31,6 +31,7 @@ import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.server.ServerCommand;
+import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
 import org.agilewiki.jfile.JFile;
 import org.agilewiki.jfile.JFileFactories;
 import org.agilewiki.jfile.block.Block;
@@ -45,7 +46,7 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
-public class ConfigServer extends Server {
+public class ConfigServer extends Server implements ServerNameListener {
     private JFile jFile;
     private RootJid rootJid;
     public static String NAME_TIME_VALUE_TYPE = "nameTimeValue";
@@ -92,6 +93,7 @@ public class ConfigServer extends Server {
         rootJid = block.getRootJid(getMailbox(), getParent());
         rootJid.makeValue(NAME_TIME_VALUE_TYPE);
         map = (StringBMapJid<TimeValueJid>) rootJid.getValue();
+        agentChannelManager().subscribeServerNameNotifications(this);
         registerServerCommand(new ServerCommand("values", "list all names and their assigned values") {
             @Override
             public void eval(String args, PrintJid out, RP<PrintJid> rp) throws Exception {
@@ -122,17 +124,31 @@ public class ConfigServer extends Server {
                         value = args.substring(i + 1).trim();
                     }
                     long timestamp = System.currentTimeMillis();
-                    map.kMake(name);
-                    TimeValueJid tv = map.kGet(name);
-                    tv.setTimestamp(timestamp);
-                    tv.setValue(value);
-                    block.setCurrentPosition(0L);
-                    jFile.writeRootJid(block, maxSize());
+                    if (assign(name, timestamp, value))
+                        out.println("OK");
+                    else
+                        throw new ClockingException();
                 }
                 rp.processResponse(out);
             }
         });
         super.startServer(out, rp);
+    }
+
+    public boolean assign(String name, long timestamp, String value) throws Exception {
+        map.kMake(name);
+        TimeValueJid tv = map.kGet(name);
+        long oldTimestamp = tv.getTimestamp();
+        String oldValue = tv.getValue();
+        if (timestamp < oldTimestamp)
+            return false;
+        if (timestamp == oldTimestamp && value.compareTo(oldValue) <= 0)
+            return false;
+        tv.setTimestamp(timestamp);
+        tv.setValue(value);
+        block.setCurrentPosition(0L);
+        jFile.writeRootJid(block, maxSize());
+        return true;
     }
 
     @Override
@@ -158,5 +174,17 @@ public class ConfigServer extends Server {
             node.mailboxFactory().close();
             throw ex;
         }
+    }
+
+    @Override
+    public void serverNameAdded(String address, String name) throws Exception {
+        if (!serverName().equals(name))
+            return;
+        if (agentChannelManager().isLocalAddress(address))
+            return;
+    }
+
+    @Override
+    public void serverNameRemoved(String address, String name) {
     }
 }
