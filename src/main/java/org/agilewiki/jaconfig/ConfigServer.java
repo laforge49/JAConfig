@@ -46,16 +46,17 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
 public class ConfigServer extends Server {
-    private JFile dbFile;
+    private JFile jFile;
     private RootJid rootJid;
     public static String NAME_TIME_VALUE_TYPE = "nameTimeValue";
     public static StringBMapJidFactory nameTimeValueMapFactory = new StringBMapJidFactory(
             NAME_TIME_VALUE_TYPE, TimeValueJidFactory.fac);
     private StringBMapJid<TimeValueJid> map;
+    private Block block;
 
     @Override
     protected String serverName() {
-        return "configServer";
+        return "config";
     }
 
     protected int maxSize() {
@@ -69,26 +70,26 @@ public class ConfigServer extends Server {
         f.registerActorFactory(TimeValueJidFactory.fac);
         f.registerActorFactory(nameTimeValueMapFactory);
         Path dbPath = new File(node().nodeDirectory(), "config.db").toPath();
-        dbFile = new JFile();
-        dbFile.initialize(getMailbox(), getParent());
-        dbFile.open(
+        jFile = new JFile();
+        jFile.initialize(getMailbox(), getParent());
+        jFile.open(
                 dbPath,
                 StandardOpenOption.READ,
                 StandardOpenOption.WRITE,
                 StandardOpenOption.CREATE);
-        Block block0 = newDbBlock();
-        block0.setCurrentPosition(0L);
-        block0.setFileName(dbPath.toString());
-        dbFile.readRootJid(block0, maxSize());
-        if (block0.isEmpty()) {
+        block = newDbBlock();
+        block.setCurrentPosition(0L);
+        block.setFileName(dbPath.toString());
+        jFile.readRootJid(block, maxSize());
+        if (block.isEmpty()) {
             JAFactory factory = (JAFactory) getAncestor(JAFactory.class);
-            block0.setRootJid(
+            block.setRootJid(
                     (RootJid) factory.newActor(
                             JidFactories.ROOT_JID_TYPE,
                             getMailbox(),
-                            dbFile));
+                            jFile));
         }
-        rootJid = block0.getRootJid(getMailbox(), getParent());
+        rootJid = block.getRootJid(getMailbox(), getParent());
         rootJid.makeValue(NAME_TIME_VALUE_TYPE);
         map = (StringBMapJid<TimeValueJid>) rootJid.getValue();
         registerServerCommand(new ServerCommand("values", "list all names and their assigned values") {
@@ -107,14 +108,38 @@ public class ConfigServer extends Server {
                 rp.processResponse(out);
             }
         });
+        registerServerCommand(new ServerCommand("assign", "set a name to a value") {
+            @Override
+            public void eval(String args, PrintJid out, RP<PrintJid> rp) throws Exception {
+                if (args.length() == 0) {
+                    out.println("missing name");
+                }  else {
+                    String name = args;
+                    String value = "";
+                    int i = args.indexOf(" ");
+                    if (i > -1) {
+                        name = args.substring(0, i);
+                        value = args.substring(i + 1).trim();
+                    }
+                    long timestamp = System.currentTimeMillis();
+                    map.kMake(name);
+                    TimeValueJid tv = map.kGet(name);
+                    tv.setTimestamp(timestamp);
+                    tv.setValue(value);
+                    block.setCurrentPosition(0L);
+                    jFile.writeRootJid(block, maxSize());
+                }
+                rp.processResponse(out);
+            }
+        });
         super.startServer(out, rp);
     }
 
     @Override
     public void close() {
-        if (dbFile != null) {
-            dbFile.close();
-            dbFile = null;
+        if (jFile != null) {
+            jFile.close();
+            jFile = null;
         }
         super.close();
     }
