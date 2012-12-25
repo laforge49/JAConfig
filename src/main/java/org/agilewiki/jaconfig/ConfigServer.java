@@ -27,15 +27,15 @@ import org.agilewiki.jactor.RP;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.node.Node;
+import org.agilewiki.jfile.JFile;
 import org.agilewiki.jfile.JFileFactories;
-import org.agilewiki.jfile.transactions.db.OpenDbFile;
-import org.agilewiki.jfile.transactions.db.inMemory.IMDB;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 
 public class ConfigServer extends Server {
-    private IMDB configIMDB;
+    private JFile configDB;
 
     @Override
     protected String serverName() {
@@ -45,21 +45,20 @@ public class ConfigServer extends Server {
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
         (new JFileFactories()).initialize(node().factory());
-        Path dbPath = new File(node().nodeDirectory(), "configDB").toPath();
-        configIMDB = new IMDB(getMailboxFactory(), node().agentChannelManager(), dbPath);
-        OpenDbFile openDbFile = new OpenDbFile(1024 * 1024);
-        openDbFile.send(this, configIMDB, new RP() {
-            @Override
-            public void processResponse(Object response) throws Exception {
-                ConfigServer.super.startServer(out, rp);
-            }
-        });
+        Path dbPath = new File(node().nodeDirectory(), "config.db").toPath();
+        configDB = new JFile();
+        configDB.initialize(getMailboxFactory().createAsyncMailbox());
+        configDB.open(
+                dbPath,
+                StandardOpenOption.READ,
+                StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE);
     }
 
     @Override
     public void close() {
-        if (configIMDB != null)
-            configIMDB.closeDbFile();
+        if (configDB != null)
+            configDB.close();
         super.close();
     }
 
