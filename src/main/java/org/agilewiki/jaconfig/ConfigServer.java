@@ -115,7 +115,7 @@ public class ConfigServer extends Server implements ServerNameListener {
             public void eval(String args, PrintJid out, RP<PrintJid> rp) throws Exception {
                 if (args.length() == 0) {
                     out.println("missing name");
-                }  else {
+                } else {
                     String name = args;
                     String value = "";
                     int i = args.indexOf(" ");
