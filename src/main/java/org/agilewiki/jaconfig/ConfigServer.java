@@ -26,6 +26,8 @@ package org.agilewiki.jaconfig;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jasocket.JASocketFactories;
+import org.agilewiki.jasocket.agentChannel.AgentChannel;
+import org.agilewiki.jasocket.agentChannel.ShipAgent;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -183,6 +185,21 @@ public class ConfigServer extends Server implements ServerNameListener {
             return;
         if (agentChannelManager().isLocalAddress(address))
             return;
+        AgentChannel agentChannel = agentChannelManager().getAgentChannel(address);
+        if (agentChannel == null)
+            return;
+        int s = map.size();
+        int i = 0;
+        while (i < s) {
+            MapEntry<String, TimeValueJid> mapEntry = map.iGet(i);
+            TimeValueJid tv = mapEntry.getValue();
+            AssignAgent assignAgent = (AssignAgent)
+                    JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
+            assignAgent.set(mapEntry.getKey(), tv.getTimestamp(), tv.getValue());
+            ShipAgent shipAgent = new ShipAgent(assignAgent);
+            shipAgent.sendEvent(this, agentChannel);
+            i += 1;
+        }
     }
 
     @Override

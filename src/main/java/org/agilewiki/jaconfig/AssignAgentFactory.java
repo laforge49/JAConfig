@@ -30,9 +30,10 @@ import org.agilewiki.jid.scalar.vlens.string.StringJidFactory;
 
 public class AssignAgentFactory extends AppJidFactory {
     public final static AssignAgentFactory fac = new AssignAgentFactory();
+    public final static String ASSIGN_AGENT = "assignAgent";
 
     public AssignAgentFactory() {
-        super("assignAgent", StringJidFactory.fac, LongJidFactory.fac, StringJidFactory.fac);
+        super(ASSIGN_AGENT, StringJidFactory.fac, LongJidFactory.fac, StringJidFactory.fac);
     }
 
     @Override
