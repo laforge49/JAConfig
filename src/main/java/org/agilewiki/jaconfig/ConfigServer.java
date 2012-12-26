@@ -68,6 +68,7 @@ public class ConfigServer extends Server implements ServerNameListener {
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
         (new JFileFactories()).initialize(getParent());
         JASocketFactories f = node().factory();
+        f.registerActorFactory(AssignAgentFactory.fac);
         f.registerActorFactory(TimeValueJidFactory.fac);
         f.registerActorFactory(nameTimeValueMapFactory);
         Path dbPath = new File(node().nodeDirectory(), "config.db").toPath();
