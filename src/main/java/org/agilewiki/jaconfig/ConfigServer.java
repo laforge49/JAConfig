@@ -147,6 +147,10 @@ public class ConfigServer extends Server implements ServerNameListener {
             return false;
         if (timestamp == oldTimestamp && value.compareTo(oldValue) <= 0)
             return false;
+        AssignAgent assignAgent = (AssignAgent)
+                JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
+        assignAgent.set(name, timestamp, value);
+        //todo
         tv.setTimestamp(timestamp);
         tv.setValue(value);
         block.setCurrentPosition(0L);
