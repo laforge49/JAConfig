@@ -28,6 +28,7 @@ import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.agentChannel.ShipAgent;
+import org.agilewiki.jasocket.cluster.ShipAgentEventToAll;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -107,7 +108,8 @@ public class ConfigServer extends Server implements ServerNameListener {
                     String name = me.getKey();
                     TimeValueJid tv = me.getValue();
                     String value = tv.getValue();
-                    out.println(name + " = " + value);
+                    if (value.length() > 0)
+                        out.println(name + " = " + value);
                     i += 1;
                 }
                 rp.processResponse(out);
@@ -147,14 +149,14 @@ public class ConfigServer extends Server implements ServerNameListener {
             return false;
         if (timestamp == oldTimestamp && value.compareTo(oldValue) <= 0)
             return false;
-        AssignAgent assignAgent = (AssignAgent)
-                JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
-        assignAgent.set(name, timestamp, value);
-        //todo
         tv.setTimestamp(timestamp);
         tv.setValue(value);
         block.setCurrentPosition(0L);
         jFile.writeRootJid(block, maxSize());
+        AssignAgent assignAgent = (AssignAgent)
+                JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
+        assignAgent.set(serverName(), name, timestamp, value);
+        (new ShipAgentEventToAll(assignAgent)).sendEvent(this, agentChannelManager());
         return true;
     }
 
@@ -199,7 +201,7 @@ public class ConfigServer extends Server implements ServerNameListener {
             TimeValueJid tv = mapEntry.getValue();
             AssignAgent assignAgent = (AssignAgent)
                     JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
-            assignAgent.set(mapEntry.getKey(), tv.getTimestamp(), tv.getValue());
+            assignAgent.set(serverName(), mapEntry.getKey(), tv.getTimestamp(), tv.getValue());
             ShipAgent shipAgent = new ShipAgent(assignAgent);
             shipAgent.sendEvent(this, agentChannel);
             i += 1;

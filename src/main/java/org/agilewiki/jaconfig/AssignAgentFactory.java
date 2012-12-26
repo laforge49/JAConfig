@@ -33,7 +33,7 @@ public class AssignAgentFactory extends AppJidFactory {
     public final static String ASSIGN_AGENT = "assignAgent";
 
     public AssignAgentFactory() {
-        super(ASSIGN_AGENT, StringJidFactory.fac, LongJidFactory.fac, StringJidFactory.fac);
+        super(ASSIGN_AGENT, StringJidFactory.fac, StringJidFactory.fac, LongJidFactory.fac, StringJidFactory.fac);
     }
 
     @Override

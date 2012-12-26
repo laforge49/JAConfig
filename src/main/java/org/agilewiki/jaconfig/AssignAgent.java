@@ -24,33 +24,49 @@
 package org.agilewiki.jaconfig;
 
 import org.agilewiki.jactor.RP;
+import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.jid.agent.AgentJid;
 import org.agilewiki.jid.Jid;
 import org.agilewiki.jid.scalar.flens.lng.LongJid;
 import org.agilewiki.jid.scalar.vlens.string.StringJid;
 
 public class AssignAgent extends AgentJid {
-    private StringJid nameJid() throws Exception {
+    private StringJid configNameJid() throws Exception {
         return (StringJid) _iGet(0);
     }
 
+    private StringJid nameJid() throws Exception {
+        return (StringJid) _iGet(1);
+    }
+
     private LongJid timestampJid() throws Exception {
-        return (LongJid) _iGet(1);
+        return (LongJid) _iGet(2);
     }
 
     private StringJid valueJid() throws Exception {
-        return (StringJid) _iGet(2);
+        return (StringJid) _iGet(3);
     }
 
-    public void set(String name, long timestamp, String value) throws Exception {
+    public void set(String configName, String name, long timestamp, String value) throws Exception {
+        configNameJid().setValue(configName);
         nameJid().setValue(name);
         timestampJid().setValue(timestamp);
         valueJid().setValue(value);
     }
 
     @Override
-    public void start(RP<Jid> rp) throws Exception {
-        Assign assign = new Assign(nameJid().getValue(), timestampJid().getValue(), valueJid().getValue());
-        assign.send(this, agentChannelManager(), (RP) rp);
+    public void start(final RP<Jid> rp) throws Exception {
+        (new GetLocalServer(configNameJid().getValue())).send(this, agentChannelManager(), new RP<JLPCActor>() {
+            @Override
+            public void processResponse(JLPCActor response) throws Exception {
+                if (response == null) {
+                    rp.processResponse(null);
+                    return;
+                }
+                Assign assign = new Assign(nameJid().getValue(), timestampJid().getValue(), valueJid().getValue());
+                assign.send(AssignAgent.this, response, (RP) rp);
+            }
+        });
     }
 }
