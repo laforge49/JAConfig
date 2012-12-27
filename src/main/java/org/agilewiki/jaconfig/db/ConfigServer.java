@@ -52,15 +52,18 @@ import java.util.HashMap;
 import java.util.HashSet;
 
 public class ConfigServer extends Server implements ServerNameListener {
-    public static String NAME_TIME_VALUE_TYPE = "nameTimeValue";
-    public static StringBMapJidFactory nameTimeValueMapFactory = new StringBMapJidFactory(
+    public static final String NAME_TIME_VALUE_TYPE = "nameTimeValue";
+    public static final StringBMapJidFactory nameTimeValueMapFactory = new StringBMapJidFactory(
             NAME_TIME_VALUE_TYPE, TimeValueJidFactory.fac);
+    public static final String TOTAL_HOST_COUNT = "totalHostCount";
 
     private HashMap<String, HashSet<String>> hosts = new HashMap<String, HashSet<String>>();
+    private int totalHostCount;
     private JFile jFile;
     private RootJid rootJid;
     private StringBMapJid<TimeValueJid> map;
     private Block block;
+    private boolean quarum;
 
     @Override
     protected String serverName() {
@@ -73,6 +76,13 @@ public class ConfigServer extends Server implements ServerNameListener {
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
+        String myAddress = agentChannelManager().agentChannelManagerAddress();
+        int p = myAddress.indexOf(":");
+        String myipa = myAddress.substring(0, p);
+        String myp = myAddress.substring(p + 1);
+        HashSet<String> ps = new HashSet<String>();
+        ps.add(myp);
+        hosts.put(myipa, ps);
         (new JFileFactories()).initialize(getParent());
         JASocketFactories f = node().factory();
         f.registerActorFactory(AssignAgentFactory.fac);
@@ -142,6 +152,12 @@ public class ConfigServer extends Server implements ServerNameListener {
             }
         });
         super.startServer(out, rp);
+        int nthc = 0;
+        String thc = get(TOTAL_HOST_COUNT);
+        if (thc != null)
+            nthc = Integer.valueOf(thc);
+        if (nthc > 0)
+            totalHostCountUpdate(nthc);
     }
 
     public boolean assign(String name, long timestamp, String value) throws Exception {
@@ -161,7 +177,20 @@ public class ConfigServer extends Server implements ServerNameListener {
                 JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
         assignAgent.set(serverName(), name, timestamp, value);
         (new ShipAgentEventToAll(assignAgent)).sendEvent(this, agentChannelManager());
+        if (name.equals(TOTAL_HOST_COUNT)) {
+            int nthc = 0;
+            if (value.length() > 0)
+                nthc = Integer.valueOf(value);
+            if (nthc != totalHostCount) {
+                totalHostCountUpdate(nthc);
+            }
+        }
         return true;
+    }
+
+    public String get(String name) throws Exception {
+        TimeValueJid tv = map.kGet(name);
+        return tv.getValue();
     }
 
     @Override
@@ -233,5 +262,23 @@ public class ConfigServer extends Server implements ServerNameListener {
                 hosts.remove(ipa);
             }
         }
+    }
+
+    private void totalHostCountUpdate(int nthc) {
+        totalHostCount = nthc;
+        boolean nq = hosts.size() >= (totalHostCount / 2 + 1);
+        if (nq != quarum)
+            if (nq)
+                quarumAchieved();
+            else
+                quarumLost();
+    }
+
+    public void quarumAchieved() {
+        quarum = true;
+    }
+
+    public void quarumLost() {
+        quarum = false;
     }
 }
