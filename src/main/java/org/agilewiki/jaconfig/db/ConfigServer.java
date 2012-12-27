@@ -48,13 +48,17 @@ import org.agilewiki.jid.scalar.vlens.actor.RootJid;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.HashMap;
+import java.util.HashSet;
 
 public class ConfigServer extends Server implements ServerNameListener {
-    private JFile jFile;
-    private RootJid rootJid;
     public static String NAME_TIME_VALUE_TYPE = "nameTimeValue";
     public static StringBMapJidFactory nameTimeValueMapFactory = new StringBMapJidFactory(
             NAME_TIME_VALUE_TYPE, TimeValueJidFactory.fac);
+
+    private HashMap<String, HashSet<String>> hosts = new HashMap<String, HashSet<String>>();
+    private JFile jFile;
+    private RootJid rootJid;
     private StringBMapJid<TimeValueJid> map;
     private Block block;
 
@@ -194,6 +198,15 @@ public class ConfigServer extends Server implements ServerNameListener {
         AgentChannel agentChannel = agentChannelManager().getAgentChannel(address);
         if (agentChannel == null)
             return;
+        int k = address.indexOf(':');
+        String ipa = address.substring(0, k);
+        String p = address.substring(k + 1);
+        HashSet<String> hps = hosts.get(ipa);
+        if (hps == null) {
+            hps = new HashSet<String>();
+            hosts.put(ipa, hps);
+        }
+        hps.add(p);
         int s = map.size();
         int i = 0;
         while (i < s) {
@@ -210,5 +223,15 @@ public class ConfigServer extends Server implements ServerNameListener {
 
     @Override
     public void serverNameRemoved(String address, String name) {
+        int k = address.indexOf(':');
+        String ipa = address.substring(0, k);
+        String p = address.substring(k + 1);
+        HashSet<String> hps = hosts.get(ipa);
+        if (hps != null) {
+            hps.remove(p);
+            if (hps.size() == 0) {
+                hosts.remove(ipa);
+            }
+        }
     }
 }
