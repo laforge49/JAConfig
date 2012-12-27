@@ -25,7 +25,7 @@ package org.agilewiki.jaconfig.db;
 
 import org.agilewiki.jaconfig.Assigned;
 import org.agilewiki.jaconfig.ConfigListener;
-import org.agilewiki.jaconfig.Quarum;
+import org.agilewiki.jaconfig.Quorum;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jasocket.JASocketFactories;
@@ -72,7 +72,7 @@ public class ConfigServer extends Server implements ServerNameListener {
     private RootJid rootJid;
     private StringBMapJid<TimeValueJid> map;
     private Block block;
-    private boolean quarum;
+    private boolean quorum;
     private HashSet<ConfigListener> listeners = new HashSet<ConfigListener>();
     private String id;
 
@@ -88,7 +88,7 @@ public class ConfigServer extends Server implements ServerNameListener {
             (new Assigned(name, value)).sendEvent(this, listener);
             i += 1;
         }
-        (new Quarum(quarum)).sendEvent(this, listener);
+        (new Quorum(quorum)).sendEvent(this, listener);
         return subscribed;
     }
 
@@ -194,7 +194,7 @@ public class ConfigServer extends Server implements ServerNameListener {
             nthc = Integer.valueOf(thc);
         if (nthc > 0) {
             totalHostCount = nthc;
-            quarumUpdate();
+            quorumUpdate();
         }
         (new RegisterServer(id, this)).send(this, agentChannelManager(), new RP<Boolean>() {
             @Override
@@ -239,7 +239,7 @@ public class ConfigServer extends Server implements ServerNameListener {
                 nthc = Integer.valueOf(value);
             if (nthc != totalHostCount) {
                 totalHostCount = nthc;
-                quarumUpdate();
+                quorumUpdate();
             }
         }
         return true;
@@ -299,7 +299,7 @@ public class ConfigServer extends Server implements ServerNameListener {
             shipAgent.sendEvent(this, agentChannel);
             i += 1;
         }
-        quarumUpdate();
+        quorumUpdate();
     }
 
     @Override
@@ -312,22 +312,22 @@ public class ConfigServer extends Server implements ServerNameListener {
             hps.remove(p);
             if (hps.size() == 0) {
                 hosts.remove(ipa);
-                quarumUpdate();
+                quorumUpdate();
             }
         }
     }
 
-    private void quarumUpdate() throws Exception {
+    private void quorumUpdate() throws Exception {
         boolean nq = (totalHostCount > 0) && (hosts.size() >= (totalHostCount / 2 + 1));
-        if (nq != quarum)
-            setQuarum(nq);
+        if (nq != quorum)
+            setQuorum(nq);
     }
 
-    public void setQuarum(boolean quorum) throws Exception {
-        this.quarum = quorum;
-        logger.info("quarum: " + quorum + " hosts=" + hosts.size() + " quorum=" + (totalHostCount / 2 + 1));
+    public void setQuorum(boolean quorum) throws Exception {
+        this.quorum = quorum;
+        logger.info("quorum: " + quorum + " hosts=" + hosts.size() + " quorum=" + (totalHostCount / 2 + 1));
         Iterator<ConfigListener> it = listeners.iterator();
-        Quarum q = new Quarum(quorum);
+        Quorum q = new Quorum(quorum);
         while (it.hasNext()) {
             q.sendEvent(this, it.next());
         }

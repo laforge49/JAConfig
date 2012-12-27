@@ -28,10 +28,10 @@ import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jactor.lpc.Request;
 
-public class Quarum extends Request<Object, ConfigListener> {
+public class Quorum extends Request<Object, ConfigListener> {
     private final boolean status;
 
-    public Quarum(boolean status) {
+    public Quorum(boolean status) {
         this.status = status;
     }
 
@@ -42,7 +42,7 @@ public class Quarum extends Request<Object, ConfigListener> {
 
     @Override
     public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
-        ((ConfigListener) targetActor).quarum(status);
+        ((ConfigListener) targetActor).quorum(status);
         rp.processResponse(null);
     }
 }
