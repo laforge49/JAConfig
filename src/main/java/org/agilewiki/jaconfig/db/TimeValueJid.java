@@ -21,32 +21,34 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig;
+package org.agilewiki.jaconfig.db;
 
-import org.agilewiki.jactor.Actor;
-import org.agilewiki.jactor.RP;
-import org.agilewiki.jactor.lpc.JLPCActor;
-import org.agilewiki.jactor.lpc.Request;
+import org.agilewiki.jid.collection.flenc.AppJid;
+import org.agilewiki.jid.scalar.flens.lng.LongJid;
+import org.agilewiki.jid.scalar.vlens.string.StringJid;
 
-public class Assign extends Request<Object, ConfigServer> {
-    private String name;
-    private long timestamp;
-    private String value;
-
-    public Assign(String name, long timestamp, String value) {
-        this.name = name;
-        this.timestamp = timestamp;
-        this.value = value;
+public class TimeValueJid extends AppJid {
+    private LongJid timestampJid() throws Exception {
+        return (LongJid) _iGet(0);
     }
 
-    @Override
-    public boolean isTargetType(Actor targetActor) {
-        return targetActor instanceof ConfigServer;
+    private StringJid valueJid() throws Exception {
+        return (StringJid) _iGet(1);
     }
 
-    @Override
-    public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
-        ((ConfigServer) targetActor).assign(name, timestamp, value);
-        rp.processResponse(null);
+    public long getTimestamp() throws Exception {
+        return timestampJid().getValue();
+    }
+
+    public void setTimestamp(long timestamp) throws Exception {
+        timestampJid().setValue(timestamp);
+    }
+
+    public String getValue() throws Exception {
+        return valueJid().getValue();
+    }
+
+    public void setValue(String value) throws Exception {
+        valueJid().setValue(value);
     }
 }

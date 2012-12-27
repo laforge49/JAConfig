@@ -21,20 +21,23 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig;
+package org.agilewiki.jaconfig.db;
 
-import org.agilewiki.jid.JidFactories;
+import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jid.collection.flenc.AppJidFactory;
+import org.agilewiki.jid.scalar.flens.lng.LongJidFactory;
+import org.agilewiki.jid.scalar.vlens.string.StringJidFactory;
 
-public class TimeValueJidFactory extends AppJidFactory {
-    final public static TimeValueJidFactory fac = new TimeValueJidFactory();
+public class AssignAgentFactory extends AppJidFactory {
+    public final static AssignAgentFactory fac = new AssignAgentFactory();
+    public final static String ASSIGN_AGENT = "assignAgent";
 
-    public TimeValueJidFactory() {
-        super("timeValue", JidFactories.LONG_JID_TYPE, JidFactories.STRING_JID_TYPE);
+    public AssignAgentFactory() {
+        super(ASSIGN_AGENT, StringJidFactory.fac, StringJidFactory.fac, LongJidFactory.fac, StringJidFactory.fac);
     }
 
     @Override
-    protected TimeValueJid instantiateActor() throws Exception {
-        return new TimeValueJid();
+    protected JLPCActor instantiateActor() throws Exception {
+        return new AssignAgent();
     }
 }
