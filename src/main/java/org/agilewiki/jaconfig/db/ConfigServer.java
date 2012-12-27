@@ -23,6 +23,9 @@
  */
 package org.agilewiki.jaconfig.db;
 
+import org.agilewiki.jaconfig.Assigned;
+import org.agilewiki.jaconfig.ConfigListener;
+import org.agilewiki.jaconfig.Quarum;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jasocket.JASocketFactories;
@@ -52,6 +55,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 
 public class ConfigServer extends Server implements ServerNameListener {
     public static final String NAME_TIME_VALUE_TYPE = "nameTimeValue";
@@ -67,6 +71,27 @@ public class ConfigServer extends Server implements ServerNameListener {
     private StringBMapJid<TimeValueJid> map;
     private Block block;
     private boolean quarum;
+    private HashSet<ConfigListener> listeners = new HashSet<ConfigListener>();
+
+    public boolean subscribe(ConfigListener listener) throws Exception {
+        boolean subscribed = listeners.add(listener);
+        int s = map.size();
+        int i = 0;
+        while (i < s) {
+            MapEntry<String, TimeValueJid> me = map.iGet(i);
+            String name = me.getKey();
+            TimeValueJid tv = me.getValue();
+            String value = tv.getValue();
+            (new Assigned(name, value)).sendEvent(this, listener);
+            i += 1;
+        }
+        (new Quarum(quarum)).sendEvent(this, listener);
+        return subscribed;
+    }
+
+    public boolean unsubscribe(ConfigListener listener) {
+        return listeners.remove(listener);
+    }
 
     @Override
     protected String serverName() {
@@ -185,6 +210,11 @@ public class ConfigServer extends Server implements ServerNameListener {
         if (value.equals(oldValue))
             return true;
         logger.info(name + " = " + value);
+        Iterator<ConfigListener> it = listeners.iterator();
+        Assigned a = new Assigned(name, value);
+        while (it.hasNext()) {
+            a.sendEvent(this, it.next());
+        }
         if (name.equals(TOTAL_HOST_COUNT)) {
             int nthc = 0;
             if (value.length() > 0)
@@ -249,7 +279,7 @@ public class ConfigServer extends Server implements ServerNameListener {
     }
 
     @Override
-    public void serverNameRemoved(String address, String name) {
+    public void serverNameRemoved(String address, String name) throws Exception {
         int k = address.indexOf(':');
         String ipa = address.substring(0, k);
         String p = address.substring(k + 1);
@@ -263,15 +293,20 @@ public class ConfigServer extends Server implements ServerNameListener {
         }
     }
 
-    private void quarumUpdate() {
+    private void quarumUpdate() throws Exception {
         boolean nq = (totalHostCount > 0) && (hosts.size() >= (totalHostCount / 2 + 1));
         if (nq != quarum)
             setQuarum(nq);
     }
 
-    public void setQuarum(boolean quorum) {
+    public void setQuarum(boolean quorum) throws Exception {
         this.quarum = quorum;
         logger.info("quarum: " + quorum + " hosts=" + hosts.size() + " quorum=" + (totalHostCount / 2 + 1));
+        Iterator<ConfigListener> it = listeners.iterator();
+        Quarum q = new Quarum(quorum);
+        while (it.hasNext()) {
+            q.sendEvent(this, it.next());
+        }
     }
 
     public static void main(String[] args) throws Exception {
