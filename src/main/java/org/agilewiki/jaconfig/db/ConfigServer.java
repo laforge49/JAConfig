@@ -159,8 +159,10 @@ public class ConfigServer extends Server implements ServerNameListener {
         String thc = get(TOTAL_HOST_COUNT);
         if (thc != null)
             nthc = Integer.valueOf(thc);
-        if (nthc > 0)
-            totalHostCountUpdate(nthc);
+        if (nthc > 0) {
+            totalHostCount = nthc;
+            quarumUpdate();
+        }
     }
 
     public boolean assign(String name, long timestamp, String value) throws Exception {
@@ -180,12 +182,16 @@ public class ConfigServer extends Server implements ServerNameListener {
                 JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
         assignAgent.set(serverName(), name, timestamp, value);
         (new ShipAgentEventToAll(assignAgent)).sendEvent(this, agentChannelManager());
+        if (value.equals(oldValue))
+            return true;
+        logger.info(name + " = " + value);
         if (name.equals(TOTAL_HOST_COUNT)) {
             int nthc = 0;
             if (value.length() > 0)
                 nthc = Integer.valueOf(value);
             if (nthc != totalHostCount) {
-                totalHostCountUpdate(nthc);
+                totalHostCount = nthc;
+                quarumUpdate();
             }
         }
         return true;
@@ -207,18 +213,6 @@ public class ConfigServer extends Server implements ServerNameListener {
 
     protected Block newDbBlock() {
         return new LA32Block();
-    }
-
-    public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
-        try {
-            node.process();
-            node.startup(ConfigServer.class, "");
-            (new ConsoleApp()).create(node);
-        } catch (Exception ex) {
-            node.mailboxFactory().close();
-            throw ex;
-        }
     }
 
     @Override
@@ -251,6 +245,7 @@ public class ConfigServer extends Server implements ServerNameListener {
             shipAgent.sendEvent(this, agentChannel);
             i += 1;
         }
+        quarumUpdate();
     }
 
     @Override
@@ -263,27 +258,31 @@ public class ConfigServer extends Server implements ServerNameListener {
             hps.remove(p);
             if (hps.size() == 0) {
                 hosts.remove(ipa);
+                quarumUpdate();
             }
         }
     }
 
-    private void totalHostCountUpdate(int nthc) {
-        totalHostCount = nthc;
+    private void quarumUpdate() {
         boolean nq = (totalHostCount > 0) && (hosts.size() >= (totalHostCount / 2 + 1));
         if (nq != quarum)
-            if (nq)
-                quarumAchieved();
-            else
-                quarumLost();
+            setQuarum(nq);
     }
 
-    public void quarumAchieved() {
-        quarum = true;
-        logger.info("quarum achieved");
+    public void setQuarum(boolean quorum) {
+        this.quarum = quorum;
+        logger.info("quarum: " + quorum + " hosts=" + hosts.size() + " quorum=" + (totalHostCount / 2 + 1));
     }
 
-    public void quarumLost() {
-        quarum = false;
-        logger.info("quarum failed");
+    public static void main(String[] args) throws Exception {
+        Node node = new Node(args, 100);
+        try {
+            node.process();
+            node.startup(ConfigServer.class, "");
+            (new ConsoleApp()).create(node);
+        } catch (Exception ex) {
+            node.mailboxFactory().close();
+            throw ex;
+        }
     }
 }
