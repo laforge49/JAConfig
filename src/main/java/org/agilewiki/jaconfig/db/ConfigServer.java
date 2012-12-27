@@ -44,6 +44,8 @@ import org.agilewiki.jid.collection.vlenc.map.MapEntry;
 import org.agilewiki.jid.collection.vlenc.map.StringBMapJid;
 import org.agilewiki.jid.collection.vlenc.map.StringBMapJidFactory;
 import org.agilewiki.jid.scalar.vlens.actor.RootJid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -56,6 +58,7 @@ public class ConfigServer extends Server implements ServerNameListener {
     public static final StringBMapJidFactory nameTimeValueMapFactory = new StringBMapJidFactory(
             NAME_TIME_VALUE_TYPE, TimeValueJidFactory.fac);
     public static final String TOTAL_HOST_COUNT = "totalHostCount";
+    public static Logger logger = LoggerFactory.getLogger(Server.class);
 
     private HashMap<String, HashSet<String>> hosts = new HashMap<String, HashSet<String>>();
     private int totalHostCount;
@@ -266,7 +269,7 @@ public class ConfigServer extends Server implements ServerNameListener {
 
     private void totalHostCountUpdate(int nthc) {
         totalHostCount = nthc;
-        boolean nq = hosts.size() >= (totalHostCount / 2 + 1);
+        boolean nq = (totalHostCount > 0) && (hosts.size() >= (totalHostCount / 2 + 1));
         if (nq != quarum)
             if (nq)
                 quarumAchieved();
@@ -276,9 +279,11 @@ public class ConfigServer extends Server implements ServerNameListener {
 
     public void quarumAchieved() {
         quarum = true;
+        logger.info("quarum achieved");
     }
 
     public void quarumLost() {
         quarum = false;
+        logger.info("quarum failed");
     }
 }
