@@ -23,7 +23,6 @@
  */
 package org.agilewiki.jaconfig;
 
-import org.agilewiki.jaconfig.db.ConfigServer;
 import org.agilewiki.jactor.Actor;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;

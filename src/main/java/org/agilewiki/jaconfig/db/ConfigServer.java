@@ -31,7 +31,9 @@ import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.agentChannel.ShipAgent;
+import org.agilewiki.jasocket.cluster.RegisterServer;
 import org.agilewiki.jasocket.cluster.ShipAgentEventToAll;
+import org.agilewiki.jasocket.cluster.UnregisterServer;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -72,6 +74,7 @@ public class ConfigServer extends Server implements ServerNameListener {
     private Block block;
     private boolean quarum;
     private HashSet<ConfigListener> listeners = new HashSet<ConfigListener>();
+    private String id;
 
     public boolean subscribe(ConfigListener listener) throws Exception {
         boolean subscribed = listeners.add(listener);
@@ -104,6 +107,11 @@ public class ConfigServer extends Server implements ServerNameListener {
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
+        String[] args = node().args();
+        if (args.length > 1) {
+            id = "node." + args[1];
+        } else
+            id = "node.default";
         String myAddress = agentChannelManager().agentChannelManagerAddress();
         int p = myAddress.indexOf(":");
         String myipa = myAddress.substring(0, p);
@@ -188,6 +196,16 @@ public class ConfigServer extends Server implements ServerNameListener {
             totalHostCount = nthc;
             quarumUpdate();
         }
+        (new RegisterServer(id, this)).send(this, agentChannelManager(), new RP<Boolean>() {
+            @Override
+            public void processResponse(Boolean response) throws Exception {
+                if (!response) {
+                    close();
+                    out.println("id already registered: " + id);
+                }
+                rp.processResponse(out);
+            }
+        });
     }
 
     public boolean assign(String name, long timestamp, String value) throws Exception {
@@ -237,6 +255,12 @@ public class ConfigServer extends Server implements ServerNameListener {
         if (jFile != null) {
             jFile.close();
             jFile = null;
+        }
+        UnregisterServer unregisterServer = new UnregisterServer(id);
+        try {
+            unregisterServer.sendEvent(agentChannelManager());
+        } catch (Exception ex) {
+            ex.printStackTrace();
         }
         super.close();
     }

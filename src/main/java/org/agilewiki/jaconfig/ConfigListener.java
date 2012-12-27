@@ -27,5 +27,6 @@ import org.agilewiki.jactor.lpc.TargetActor;
 
 public interface ConfigListener extends TargetActor {
     public void quarum(boolean status);
+
     public void assigned(String name, String value);
 }
