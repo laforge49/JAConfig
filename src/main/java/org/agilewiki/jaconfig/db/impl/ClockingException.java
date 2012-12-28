@@ -21,20 +21,7 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig.db;
+package org.agilewiki.jaconfig.db.impl;
 
-import org.agilewiki.jid.JidFactories;
-import org.agilewiki.jid.collection.flenc.AppJidFactory;
-
-public class TimeValueJidFactory extends AppJidFactory {
-    final public static TimeValueJidFactory fac = new TimeValueJidFactory();
-
-    public TimeValueJidFactory() {
-        super("timeValue", JidFactories.LONG_JID_TYPE, JidFactories.STRING_JID_TYPE);
-    }
-
-    @Override
-    protected TimeValueJid instantiateActor() throws Exception {
-        return new TimeValueJid();
-    }
+public class ClockingException extends Exception {
 }

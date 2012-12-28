@@ -21,9 +21,9 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig;
+package org.agilewiki.jaconfig.db;
 
-import org.agilewiki.jaconfig.db.ConfigServer;
+import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jactor.Actor;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;

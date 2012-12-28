@@ -23,5 +23,28 @@
  */
 package org.agilewiki.jaconfig.db;
 
-public class ClockingException extends Exception {
+import org.agilewiki.jactor.Actor;
+import org.agilewiki.jactor.RP;
+import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jactor.lpc.Request;
+
+public class Assigned extends Request<Object, ConfigListener> {
+    private final String name;
+    private final String value;
+
+    public Assigned(String name, String value) {
+        this.name = name;
+        this.value = value;
+    }
+
+    @Override
+    public boolean isTargetType(Actor targetActor) {
+        return targetActor instanceof ConfigListener;
+    }
+
+    @Override
+    public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
+        ((ConfigListener) targetActor).assigned(name, value);
+        rp.processResponse(null);
+    }
 }

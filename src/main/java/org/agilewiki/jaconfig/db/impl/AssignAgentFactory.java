@@ -21,30 +21,23 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig;
+package org.agilewiki.jaconfig.db.impl;
 
-import org.agilewiki.jactor.Actor;
-import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
-import org.agilewiki.jactor.lpc.Request;
+import org.agilewiki.jid.collection.flenc.AppJidFactory;
+import org.agilewiki.jid.scalar.flens.lng.LongJidFactory;
+import org.agilewiki.jid.scalar.vlens.string.StringJidFactory;
 
-public class Assigned extends Request<Object, ConfigListener> {
-    private final String name;
-    private final String value;
+public class AssignAgentFactory extends AppJidFactory {
+    public final static AssignAgentFactory fac = new AssignAgentFactory();
+    public final static String ASSIGN_AGENT = "assignAgent";
 
-    public Assigned(String name, String value) {
-        this.name = name;
-        this.value = value;
+    public AssignAgentFactory() {
+        super(ASSIGN_AGENT, StringJidFactory.fac, StringJidFactory.fac, LongJidFactory.fac, StringJidFactory.fac);
     }
 
     @Override
-    public boolean isTargetType(Actor targetActor) {
-        return targetActor instanceof ConfigListener;
-    }
-
-    @Override
-    public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
-        ((ConfigListener) targetActor).assigned(name, value);
-        rp.processResponse(null);
+    protected JLPCActor instantiateActor() throws Exception {
+        return new AssignAgent();
     }
 }

@@ -23,30 +23,10 @@
  */
 package org.agilewiki.jaconfig.db;
 
-import org.agilewiki.jactor.Actor;
-import org.agilewiki.jactor.RP;
-import org.agilewiki.jactor.lpc.JLPCActor;
-import org.agilewiki.jactor.lpc.Request;
+import org.agilewiki.jactor.lpc.TargetActor;
 
-public class Assign extends Request<Object, ConfigServer> {
-    private String name;
-    private long timestamp;
-    private String value;
+public interface ConfigListener extends TargetActor {
+    public void quorum(boolean status);
 
-    public Assign(String name, long timestamp, String value) {
-        this.name = name;
-        this.timestamp = timestamp;
-        this.value = value;
-    }
-
-    @Override
-    public boolean isTargetType(Actor targetActor) {
-        return targetActor instanceof ConfigServer;
-    }
-
-    @Override
-    public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
-        ((ConfigServer) targetActor).assign(name, timestamp, value);
-        rp.processResponse(null);
-    }
+    public void assigned(String name, String value);
 }

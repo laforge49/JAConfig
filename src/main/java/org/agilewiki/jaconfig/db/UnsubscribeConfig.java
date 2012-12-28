@@ -23,32 +23,26 @@
  */
 package org.agilewiki.jaconfig.db;
 
-import org.agilewiki.jid.collection.flenc.AppJid;
-import org.agilewiki.jid.scalar.flens.lng.LongJid;
-import org.agilewiki.jid.scalar.vlens.string.StringJid;
+import org.agilewiki.jaconfig.db.impl.ConfigServer;
+import org.agilewiki.jactor.Actor;
+import org.agilewiki.jactor.RP;
+import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jactor.lpc.Request;
 
-public class TimeValueJid extends AppJid {
-    private LongJid timestampJid() throws Exception {
-        return (LongJid) _iGet(0);
+public class UnsubscribeConfig extends Request<Boolean, ConfigServer> {
+    private final ConfigListener listener;
+
+    public UnsubscribeConfig(ConfigListener listener) {
+        this.listener = listener;
     }
 
-    private StringJid valueJid() throws Exception {
-        return (StringJid) _iGet(1);
+    @Override
+    public boolean isTargetType(Actor targetActor) {
+        return targetActor instanceof ConfigServer;
     }
 
-    public long getTimestamp() throws Exception {
-        return timestampJid().getValue();
-    }
-
-    public void setTimestamp(long timestamp) throws Exception {
-        timestampJid().setValue(timestamp);
-    }
-
-    public String getValue() throws Exception {
-        return valueJid().getValue();
-    }
-
-    public void setValue(String value) throws Exception {
-        valueJid().setValue(value);
+    @Override
+    public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
+        rp.processResponse(((ConfigServer) targetActor).unsubscribe(listener));
     }
 }

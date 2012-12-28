@@ -21,28 +21,20 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig;
+package org.agilewiki.jaconfig.db.impl;
 
-import org.agilewiki.jactor.Actor;
-import org.agilewiki.jactor.RP;
-import org.agilewiki.jactor.lpc.JLPCActor;
-import org.agilewiki.jactor.lpc.Request;
+import org.agilewiki.jid.JidFactories;
+import org.agilewiki.jid.collection.flenc.AppJidFactory;
 
-public class Quorum extends Request<Object, ConfigListener> {
-    private final boolean status;
+public class TimeValueJidFactory extends AppJidFactory {
+    final public static TimeValueJidFactory fac = new TimeValueJidFactory();
 
-    public Quorum(boolean status) {
-        this.status = status;
+    public TimeValueJidFactory() {
+        super("timeValue", JidFactories.LONG_JID_TYPE, JidFactories.STRING_JID_TYPE);
     }
 
     @Override
-    public boolean isTargetType(Actor targetActor) {
-        return targetActor instanceof ConfigListener;
-    }
-
-    @Override
-    public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
-        ((ConfigListener) targetActor).quorum(status);
-        rp.processResponse(null);
+    protected TimeValueJid instantiateActor() throws Exception {
+        return new TimeValueJid();
     }
 }

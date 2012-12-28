@@ -21,11 +21,11 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig.db;
+package org.agilewiki.jaconfig.db.impl;
 
-import org.agilewiki.jaconfig.Assigned;
-import org.agilewiki.jaconfig.ConfigListener;
-import org.agilewiki.jaconfig.Quorum;
+import org.agilewiki.jaconfig.db.Assigned;
+import org.agilewiki.jaconfig.db.ConfigListener;
+import org.agilewiki.jaconfig.db.Quorum;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jasocket.JASocketFactories;
