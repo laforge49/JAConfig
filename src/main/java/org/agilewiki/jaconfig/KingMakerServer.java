@@ -51,7 +51,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     TreeSet<String> kingmakers = new TreeSet<String>();
     TreeSet<String> clusterManagers = new TreeSet<String>();
 
-    private void startClusterManager(final RP rp) throws Exception {
+    private void startClusterManager() throws Exception {
         String args = startupArgs;
         int i = args.indexOf(' ');
         String serverClassName = args;
@@ -76,7 +76,6 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
                 sb.append(serverClass.getName() + ":\n");
                 out.appendto(sb);
                 logger.info(sb.toString().trim());
-                rp.processResponse(null);
             }
         });
     }
@@ -114,15 +113,29 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
             kingmakers.remove(address);
         else if ("clusterManager".equals(name))
             clusterManagers.remove(address);
-        if (!quorum)
-            return;
+        perform();
     }
 
     @Override
-    public void quorum(boolean status) {
+    public void quorum(boolean status) throws Exception {
         quorum = status;
+        perform();
+    }
+
+    private void perform() throws Exception {
         if (!quorum)
             return;
+        if (clusterManagers.size() == 1)
+            return;
+        if (clusterManagers.isEmpty()) {
+            if (agentChannelManager().isLocalAddress(kingmakers.first())) {
+                startClusterManager();
+            }
+        } else if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+            if (!agentChannelManager().isLocalAddress(clusterManagers.last())) {
+                clusterManager.close();
+            }
+        }
     }
 
     public static void main(String[] args) throws Exception {

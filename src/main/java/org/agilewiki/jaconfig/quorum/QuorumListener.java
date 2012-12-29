@@ -26,5 +26,5 @@ package org.agilewiki.jaconfig.quorum;
 import org.agilewiki.jactor.lpc.TargetActor;
 
 public interface QuorumListener extends TargetActor {
-    public void quorum(boolean status);
+    public void quorum(boolean status) throws Exception;
 }
