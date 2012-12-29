@@ -54,6 +54,10 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     private boolean quorum;
     private HashSet<QuorumListener> listeners = new HashSet<QuorumListener>();
 
+    protected String quarumServerName() {
+        return startupArgs;
+    }
+
     @Override
     protected String serverName() {
         return "quorum";
@@ -114,7 +118,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
 
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
-        if (!serverName().equals(name))
+        if (!quarumServerName().equals(name))
             return;
         if (agentChannelManager().isLocalAddress(address))
             return;
@@ -169,7 +173,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         try {
             node.process();
             node.startup(ConfigServer.class, "");
-            node.startup(QuorumServer.class, "");
+            node.startup(QuorumServer.class, "quorum");
             (new ConsoleApp()).create(node);
         } catch (Exception ex) {
             node.mailboxFactory().close();

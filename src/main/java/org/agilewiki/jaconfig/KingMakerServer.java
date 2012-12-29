@@ -41,12 +41,17 @@ import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.TreeSet;
+
 public class KingmakerServer extends Server implements ServerNameListener, QuorumListener {
     public static Logger logger = LoggerFactory.getLogger(KingmakerServer.class);
 
     private boolean quorum;
+    BaseClusterManager clusterManager;
+    TreeSet<String> kingmakers = new TreeSet<String>();
+    TreeSet<String> clusterManagers = new TreeSet<String>();
 
-    private void startClusterManager() throws Exception {
+    private void startClusterManager(final RP rp) throws Exception {
         String args = startupArgs;
         int i = args.indexOf(' ');
         String serverClassName = args;
@@ -59,18 +64,19 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         Node node = agentChannelManager().node;
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);
-        Server server = node.initializeServer(serverClass);
+        clusterManager = (BaseClusterManager) node.initializeServer(serverClass);
         final PrintJid out = (PrintJid) node().factory().newActor(
                 JASocketFactories.PRINT_JID_FACTORY,
                 node().mailboxFactory().createMailbox());
         Startup startup = new Startup(node, args, out);
-        startup.send(this, server, new RP<PrintJid>() {
+        startup.send(this, clusterManager, new RP<PrintJid>() {
             @Override
             public void processResponse(PrintJid response) throws Exception {
                 StringBuilder sb = new StringBuilder();
                 sb.append(serverClass.getName() + ":\n");
                 out.appendto(sb);
                 logger.info(sb.toString().trim());
+                rp.processResponse(null);
             }
         });
     }
@@ -94,12 +100,20 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
 
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
+        if ("kingmaker".equals(name))
+            kingmakers.add(address);
+        else if ("clusterManager".equals(name))
+            clusterManagers.add(address);
         if (!quorum)
             return;
     }
 
     @Override
     public void serverNameRemoved(String address, String name) throws Exception {
+        if ("kingmaker".equals(name))
+            kingmakers.remove(address);
+        else if ("clusterManager".equals(name))
+            clusterManagers.remove(address);
         if (!quorum)
             return;
     }
@@ -116,8 +130,8 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         try {
             node.process();
             node.startup(ConfigServer.class, "");
-            node.startup(QuorumServer.class, "");
-            node.startup(KingmakerServer.class, DummyClusterManager.class.getName());
+            node.startup(QuorumServer.class, "kingmaker");
+            node.startup(KingmakerServer.class, BaseClusterManager.class.getName());
             (new ConsoleApp()).create(node);
         } catch (Exception ex) {
             node.mailboxFactory().close();
