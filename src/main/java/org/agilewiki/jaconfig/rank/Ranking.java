@@ -31,6 +31,8 @@ import org.agilewiki.jactor.lpc.Request;
 import java.util.List;
 
 public class Ranking extends Request<List<String>, Ranker> {
+    public static final Ranking req = new Ranking();
+
     @Override
     public boolean isTargetType(Actor targetActor) {
         return targetActor instanceof Ranker;

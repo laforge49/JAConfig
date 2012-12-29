@@ -32,7 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 
 abstract public class Ranker extends Server {
-    abstract public List<String> ranking(RP<List<String>> rp) throws Exception;
+    abstract public void ranking(RP<List<String>> rp) throws Exception;
 
     @Override
     protected String serverName() {
