@@ -120,8 +120,6 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     public void serverNameAdded(String address, String name) throws Exception {
         if (!quarumServerName().equals(name))
             return;
-        if (agentChannelManager().isLocalAddress(address))
-            return;
         AgentChannel agentChannel = agentChannelManager().getAgentChannel(address);
         if (agentChannel == null)
             return;
@@ -139,6 +137,8 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
 
     @Override
     public void serverNameRemoved(String address, String name) throws Exception {
+        if (!quarumServerName().equals(name))
+            return;
         int k = address.indexOf(':');
         String ipa = address.substring(0, k);
         String p = address.substring(k + 1);
