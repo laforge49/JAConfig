@@ -25,7 +25,6 @@ package org.agilewiki.jaconfig.db.impl;
 
 import org.agilewiki.jaconfig.db.Assigned;
 import org.agilewiki.jaconfig.db.ConfigListener;
-import org.agilewiki.jaconfig.db.Quorum;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jasocket.JASocketFactories;
@@ -53,7 +52,6 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -61,16 +59,12 @@ public class ConfigServer extends Server implements ServerNameListener {
     public static final String NAME_TIME_VALUE_TYPE = "nameTimeValue";
     public static final StringBMapJidFactory nameTimeValueMapFactory = new StringBMapJidFactory(
             NAME_TIME_VALUE_TYPE, TimeValueJidFactory.fac);
-    public static final String TOTAL_HOST_COUNT = "totalHostCount";
-    public static Logger logger = LoggerFactory.getLogger(Server.class);
+    public static Logger logger = LoggerFactory.getLogger(ConfigServer.class);
 
-    private HashMap<String, HashSet<String>> hosts = new HashMap<String, HashSet<String>>();
-    private int totalHostCount;
     private JFile jFile;
     private RootJid rootJid;
     private StringBMapJid<TimeValueJid> map;
     private Block block;
-    private boolean quorum;
     private HashSet<ConfigListener> listeners = new HashSet<ConfigListener>();
 
     public boolean subscribe(ConfigListener listener) throws Exception {
@@ -85,7 +79,6 @@ public class ConfigServer extends Server implements ServerNameListener {
             (new Assigned(name, value)).sendEvent(this, listener);
             i += 1;
         }
-        (new Quorum(quorum)).sendEvent(this, listener);
         return subscribed;
     }
 
@@ -104,13 +97,6 @@ public class ConfigServer extends Server implements ServerNameListener {
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
-        String myAddress = agentChannelManager().agentChannelManagerAddress();
-        int p = myAddress.indexOf(":");
-        String myipa = myAddress.substring(0, p);
-        String myp = myAddress.substring(p + 1);
-        HashSet<String> ps = new HashSet<String>();
-        ps.add(myp);
-        hosts.put(myipa, ps);
         (new JFileFactories()).initialize(getParent());
         JASocketFactories f = node().factory();
         f.registerActorFactory(AssignAgentFactory.fac);
@@ -139,7 +125,6 @@ public class ConfigServer extends Server implements ServerNameListener {
         rootJid = block.getRootJid(getMailbox(), getParent());
         rootJid.makeValue(NAME_TIME_VALUE_TYPE);
         map = (StringBMapJid<TimeValueJid>) rootJid.getValue();
-        agentChannelManager().subscribeServerNameNotifications(this);
         registerServerCommand(new ServerCommand("values", "list all names and their assigned values") {
             @Override
             public void eval(String args, PrintJid out, RP<PrintJid> rp) throws Exception {
@@ -180,15 +165,6 @@ public class ConfigServer extends Server implements ServerNameListener {
             }
         });
         super.startServer(out, rp);
-        int nthc = 0;
-        String thc = get(TOTAL_HOST_COUNT);
-        if (thc != null)
-            nthc = Integer.valueOf(thc);
-        if (nthc > 0) {
-            totalHostCount = nthc;
-            quorumUpdate();
-        }
-        rp.processResponse(out);
     }
 
     public boolean assign(String name, long timestamp, String value) throws Exception {
@@ -215,15 +191,6 @@ public class ConfigServer extends Server implements ServerNameListener {
         Assigned a = new Assigned(name, value);
         while (it.hasNext()) {
             a.sendEvent(this, it.next());
-        }
-        if (name.equals(TOTAL_HOST_COUNT)) {
-            int nthc = 0;
-            if (value.length() > 0)
-                nthc = Integer.valueOf(value);
-            if (nthc != totalHostCount) {
-                totalHostCount = nthc;
-                quorumUpdate();
-            }
         }
         return true;
     }
@@ -255,15 +222,6 @@ public class ConfigServer extends Server implements ServerNameListener {
         AgentChannel agentChannel = agentChannelManager().getAgentChannel(address);
         if (agentChannel == null)
             return;
-        int k = address.indexOf(':');
-        String ipa = address.substring(0, k);
-        String p = address.substring(k + 1);
-        HashSet<String> hps = hosts.get(ipa);
-        if (hps == null) {
-            hps = new HashSet<String>();
-            hosts.put(ipa, hps);
-        }
-        hps.add(p);
         int s = map.size();
         int i = 0;
         while (i < s) {
@@ -276,38 +234,10 @@ public class ConfigServer extends Server implements ServerNameListener {
             shipAgent.sendEvent(this, agentChannel);
             i += 1;
         }
-        quorumUpdate();
     }
 
     @Override
     public void serverNameRemoved(String address, String name) throws Exception {
-        int k = address.indexOf(':');
-        String ipa = address.substring(0, k);
-        String p = address.substring(k + 1);
-        HashSet<String> hps = hosts.get(ipa);
-        if (hps != null) {
-            hps.remove(p);
-            if (hps.size() == 0) {
-                hosts.remove(ipa);
-                quorumUpdate();
-            }
-        }
-    }
-
-    private void quorumUpdate() throws Exception {
-        boolean nq = (totalHostCount > 0) && (hosts.size() >= (totalHostCount / 2 + 1));
-        if (nq != quorum)
-            setQuorum(nq);
-    }
-
-    public void setQuorum(boolean quorum) throws Exception {
-        this.quorum = quorum;
-        logger.info("quorum: " + quorum + " hosts=" + hosts.size() + " quorum=" + (totalHostCount / 2 + 1));
-        Iterator<ConfigListener> it = listeners.iterator();
-        Quorum q = new Quorum(quorum);
-        while (it.hasNext()) {
-            q.sendEvent(this, it.next());
-        }
     }
 
     public static void main(String[] args) throws Exception {

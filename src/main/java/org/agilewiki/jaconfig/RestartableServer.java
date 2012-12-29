@@ -23,27 +23,27 @@
  */
 package org.agilewiki.jaconfig;
 
-import org.agilewiki.jaconfig.db.ConfigListener;
-import org.agilewiki.jaconfig.db.SubscribeConfig;
-import org.agilewiki.jaconfig.db.UnsubscribeConfig;
-import org.agilewiki.jaconfig.db.impl.ConfigServer;
+import org.agilewiki.jaconfig.quorum.QuorumListener;
+import org.agilewiki.jaconfig.quorum.QuorumServer;
+import org.agilewiki.jaconfig.quorum.SubscribeQuorum;
+import org.agilewiki.jaconfig.quorum.UnsubscribeQuorum;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.server.Server;
 
-public class QuorumServer extends Server implements ConfigListener {
-    protected ConfigServer configServer;
+public class RestartableServer extends Server implements QuorumListener {
+    protected QuorumServer quorumServer;
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
-        (new GetLocalServer("config")).send(this, agentChannelManager(), new RP<JLPCActor>() {
+        (new GetLocalServer("quorum")).send(this, agentChannelManager(), new RP<JLPCActor>() {
             @Override
             public void processResponse(JLPCActor response) throws Exception {
-                configServer = (ConfigServer) response;
-                (new SubscribeConfig(QuorumServer.this)).sendEvent(QuorumServer.this, configServer);
-                QuorumServer.super.startServer(out, rp);
+                quorumServer = (QuorumServer) response;
+                (new SubscribeQuorum(RestartableServer.this)).sendEvent(RestartableServer.this, quorumServer);
+                RestartableServer.super.startServer(out, rp);
             }
         });
     }
@@ -51,8 +51,9 @@ public class QuorumServer extends Server implements ConfigListener {
     @Override
     public void close() {
         try {
-            (new UnsubscribeConfig(this)).sendEvent(this, configServer);
-        } catch (Exception ex) {}
+            (new UnsubscribeQuorum(this)).sendEvent(this, quorumServer);
+        } catch (Exception ex) {
+        }
         super.close();
     }
 
@@ -60,9 +61,5 @@ public class QuorumServer extends Server implements ConfigListener {
     public void quorum(boolean status) {
         if (!status)
             close();
-    }
-
-    @Override
-    public void assigned(String name, String value) {
     }
 }

@@ -21,10 +21,28 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig.db;
+package org.agilewiki.jaconfig.quorum;
 
-import org.agilewiki.jactor.lpc.TargetActor;
+import org.agilewiki.jactor.Actor;
+import org.agilewiki.jactor.RP;
+import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jactor.lpc.Request;
 
-public interface ConfigListener extends TargetActor {
-    public void assigned(String name, String value) throws Exception;
+public class Quorum extends Request<Object, QuorumListener> {
+    private final boolean status;
+
+    public Quorum(boolean status) {
+        this.status = status;
+    }
+
+    @Override
+    public boolean isTargetType(Actor targetActor) {
+        return targetActor instanceof QuorumListener;
+    }
+
+    @Override
+    public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
+        ((QuorumListener) targetActor).quorum(status);
+        rp.processResponse(null);
+    }
 }

@@ -21,10 +21,10 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig.db;
+package org.agilewiki.jaconfig.quorum;
 
 import org.agilewiki.jactor.lpc.TargetActor;
 
-public interface ConfigListener extends TargetActor {
-    public void assigned(String name, String value) throws Exception;
+public interface QuorumListener extends TargetActor {
+    public void quorum(boolean status);
 }
