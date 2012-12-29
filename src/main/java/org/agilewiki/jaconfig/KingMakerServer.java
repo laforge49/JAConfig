@@ -23,19 +23,57 @@
  */
 package org.agilewiki.jaconfig;
 
+import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.quorum.QuorumListener;
 import org.agilewiki.jaconfig.quorum.QuorumServer;
 import org.agilewiki.jaconfig.quorum.SubscribeQuorum;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.jid.PrintJid;
+import org.agilewiki.jasocket.node.ConsoleApp;
+import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
+import org.agilewiki.jasocket.server.Startup;
 import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class KingmakerServer extends Server implements ServerNameListener, QuorumListener {
-    protected QuorumServer quorumServer;
+    public static Logger logger = LoggerFactory.getLogger(KingmakerServer.class);
+
+    private boolean quorum;
+
+    private void startClusterManager() throws Exception {
+        String args = startupArgs;
+        int i = args.indexOf(' ');
+        String serverClassName = args;
+        if (i > -1) {
+            serverClassName = args.substring(0, i);
+            args = args.substring(i + 1).trim();
+        } else {
+            args = "";
+        }
+        Node node = agentChannelManager().node;
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);
+        Server server = node.initializeServer(serverClass);
+        final PrintJid out = (PrintJid) node().factory().newActor(
+                JASocketFactories.PRINT_JID_FACTORY,
+                node().mailboxFactory().createMailbox());
+        Startup startup = new Startup(node, args, out);
+        startup.send(this, server, new RP<PrintJid>() {
+            @Override
+            public void processResponse(PrintJid response) throws Exception {
+                StringBuilder sb = new StringBuilder();
+                sb.append(serverClass.getName() + ":\n");
+                out.appendto(sb);
+                logger.info(sb.toString().trim());
+            }
+        });
+    }
 
     @Override
     protected String serverName() {
@@ -48,8 +86,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         (new GetLocalServer("quorum")).send(this, agentChannelManager(), new RP<JLPCActor>() {
             @Override
             public void processResponse(JLPCActor response) throws Exception {
-                quorumServer = (QuorumServer) response;
-                (new SubscribeQuorum(KingmakerServer.this)).sendEvent(KingmakerServer.this, quorumServer);
+                (new SubscribeQuorum(KingmakerServer.this)).sendEvent(KingmakerServer.this, response);
                 KingmakerServer.super.startServer(out, rp);
             }
         });
@@ -57,16 +94,34 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
 
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
-        //To change body of implemented methods use File | Settings | File Templates.
+        if (!quorum)
+            return;
     }
 
     @Override
     public void serverNameRemoved(String address, String name) throws Exception {
-        //To change body of implemented methods use File | Settings | File Templates.
+        if (!quorum)
+            return;
     }
 
     @Override
     public void quorum(boolean status) {
-        //To change body of implemented methods use File | Settings | File Templates.
+        quorum = status;
+        if (!quorum)
+            return;
+    }
+
+    public static void main(String[] args) throws Exception {
+        Node node = new Node(args, 100);
+        try {
+            node.process();
+            node.startup(ConfigServer.class, "");
+            node.startup(QuorumServer.class, "");
+            node.startup(KingmakerServer.class, DummyClusterManager.class.getName());
+            (new ConsoleApp()).create(node);
+        } catch (Exception ex) {
+            node.mailboxFactory().close();
+            throw ex;
+        }
     }
 }
