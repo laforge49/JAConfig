@@ -31,6 +31,7 @@ import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.agentChannel.ShipAgent;
 import org.agilewiki.jasocket.cluster.ShipAgentEventToAll;
+import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -164,6 +165,7 @@ public class ConfigServer extends Server implements ServerNameListener {
                 rp.processResponse(out);
             }
         });
+        (new SubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
         super.startServer(out, rp);
     }
 

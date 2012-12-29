@@ -31,6 +31,7 @@ import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
+import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -67,11 +68,11 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         HashSet<String> ps = new HashSet<String>();
         ps.add(myp);
         hosts.put(myipa, ps);
+        (new SubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
         (new GetLocalServer("config")).send(this, agentChannelManager(), new RP<JLPCActor>() {
             @Override
             public void processResponse(JLPCActor response) throws Exception {
                 configServer = (ConfigServer) response;
-                agentChannelManager().subscribeServerNameNotifications(QuorumServer.this);
                 (new SubscribeConfig(QuorumServer.this)).sendEvent(QuorumServer.this, configServer);
                 QuorumServer.super.startServer(out, rp);
             }
