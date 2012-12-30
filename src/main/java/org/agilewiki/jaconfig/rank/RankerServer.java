@@ -31,7 +31,7 @@ import org.agilewiki.jasocket.server.ServerCommand;
 import java.util.Iterator;
 import java.util.List;
 
-abstract public class Ranker extends Server {
+abstract public class RankerServer extends Server {
     abstract public void ranking(RP<List<String>> rp) throws Exception;
 
     @Override

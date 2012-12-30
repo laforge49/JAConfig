@@ -4,12 +4,18 @@ import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jaconfig.db.SubscribeConfig;
 import org.agilewiki.jaconfig.db.UnsubscribeConfig;
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
+import org.agilewiki.jaconfig.rank.RankerServer;
+import org.agilewiki.jaconfig.rank.Ranking;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
 import org.agilewiki.jasocket.jid.PrintJid;
+import org.agilewiki.jasocket.node.Node;
+import org.agilewiki.jasocket.server.Server;
+import org.agilewiki.jasocket.server.Startup;
 import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,11 +23,13 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 
 public class ClusterManager extends ManagedServer implements ServerNameListener, ConfigListener {
     public static Logger logger = LoggerFactory.getLogger(ClusterManager.class);
 
     private ConfigServer configServer;
+    private RankerServer rankerServer;
     private String configPrefix;
     private HashMap<String, HashSet<String>> serverAddresses = new HashMap<String, HashSet<String>>();
     private HashMap<String, String> serverConfigs = new HashMap<String, String>();
@@ -35,7 +43,13 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             public void processResponse(JLPCActor response) throws Exception {
                 configServer = (ConfigServer) response;
                 (new SubscribeConfig(ClusterManager.this)).sendEvent(ClusterManager.this, configServer);
-                ClusterManager.super.startServer(out, rp);
+                (new GetLocalServer("ranker")).send(ClusterManager.this, agentChannelManager(), new RP<JLPCActor>() {
+                    @Override
+                    public void processResponse(JLPCActor response) throws Exception {
+                        rankerServer = (RankerServer) response;
+                        ClusterManager.super.startServer(out, rp);
+                    }
+                });
             }
         });
     }
@@ -112,8 +126,49 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         }
     }
 
-    private void startup(String name) throws Exception {
+    private void startup(final String name) throws Exception {
+        final String args = serverConfigs.get(name);
+        Thread.sleep(1000);
+        Ranking.req.send(this, rankerServer, new RP<List<String>>() {
+            @Override
+            public void processResponse(List<String> response) throws Exception {
+                String address = response.get(0);
+                if (agentChannelManager().isLocalAddress(address)) {
+                    localStartup(name, args);
+                } else {
+                    System.out.println("todo--remote startup");
+                }
+            }
+        });
+    }
 
+    private void localStartup(String name, String args) throws Exception {
+        int i = args.indexOf(' ');
+        String serverClassName = args;
+        if (i > -1) {
+            serverClassName = args.substring(0, i);
+            args = args.substring(i + 1).trim();
+        } else {
+            args = "";
+        }
+        args = name + " " + args;
+        Node node = agentChannelManager().node;
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);
+        ManagedServer managedServer = (ManagedServer) node.initializeServer(serverClass);
+        final PrintJid out = (PrintJid) node().factory().newActor(
+                JASocketFactories.PRINT_JID_FACTORY,
+                node().mailboxFactory().createMailbox());
+        Startup startup = new Startup(node, args, out);
+        startup.send(this, managedServer, new RP<PrintJid>() {
+            @Override
+            public void processResponse(PrintJid response) throws Exception {
+                StringBuilder sb = new StringBuilder();
+                sb.append(serverClass.getName() + ":\n");
+                out.appendto(sb);
+                logger.info(sb.toString().trim());
+            }
+        });
     }
 
     private void shutdown(String name, String address) throws Exception {
