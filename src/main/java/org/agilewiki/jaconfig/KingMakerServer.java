@@ -27,6 +27,7 @@ import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.quorum.QuorumListener;
 import org.agilewiki.jaconfig.quorum.QuorumServer;
 import org.agilewiki.jaconfig.quorum.SubscribeQuorum;
+import org.agilewiki.jaconfig.rank.simple.SimpleRanker;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.JASocketFactories;
@@ -144,6 +145,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         try {
             node.process();
             node.startup(ConfigServer.class, "");
+            node.startup(SimpleRanker.class, "");
             node.startup(QuorumServer.class, "kingmaker");
             node.startup(KingmakerServer.class, ClusterManager.class.getName());
             (new ConsoleApp()).create(node);
