@@ -47,9 +47,9 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     public static Logger logger = LoggerFactory.getLogger(KingmakerServer.class);
 
     private boolean quorum;
-    BaseClusterManager clusterManager;
-    TreeSet<String> kingmakers = new TreeSet<String>();
-    TreeSet<String> clusterManagers = new TreeSet<String>();
+    private ClusterManager clusterManager;
+    private TreeSet<String> kingmakers = new TreeSet<String>();
+    private TreeSet<String> clusterManagers = new TreeSet<String>();
 
     private void startClusterManager() throws Exception {
         String args = startupArgs;
@@ -64,7 +64,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         Node node = agentChannelManager().node;
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);
-        clusterManager = (BaseClusterManager) node.initializeServer(serverClass);
+        clusterManager = (ClusterManager) node.initializeServer(serverClass);
         final PrintJid out = (PrintJid) node().factory().newActor(
                 JASocketFactories.PRINT_JID_FACTORY,
                 node().mailboxFactory().createMailbox());
@@ -144,7 +144,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
             node.process();
             node.startup(ConfigServer.class, "");
             node.startup(QuorumServer.class, "kingmaker");
-            node.startup(KingmakerServer.class, BaseClusterManager.class.getName());
+            node.startup(KingmakerServer.class, ClusterManager.class.getName());
             (new ConsoleApp()).create(node);
         } catch (Exception ex) {
             node.mailboxFactory().close();
