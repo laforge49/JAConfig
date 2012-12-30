@@ -11,7 +11,7 @@ import org.agilewiki.jasocket.jid.PrintJid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class ClusterManager extends RestartableServer implements ConfigListener {
+public class ClusterManager extends ManagedServer implements ConfigListener {
     public static Logger logger = LoggerFactory.getLogger(ClusterManager.class);
 
     private ConfigServer configServer;

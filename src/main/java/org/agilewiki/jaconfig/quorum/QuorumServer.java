@@ -56,7 +56,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     private String thcName;
 
     protected String quorumServerName() {
-        return startupArgs;
+        return startupArgs();
     }
 
     @Override

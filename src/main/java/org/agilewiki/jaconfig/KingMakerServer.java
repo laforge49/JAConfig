@@ -52,7 +52,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     private TreeSet<String> clusterManagers = new TreeSet<String>();
 
     private void startClusterManager() throws Exception {
-        String args = startupArgs;
+        String args = startupArgs();
         int i = args.indexOf(' ');
         String serverClassName = args;
         if (i > -1) {

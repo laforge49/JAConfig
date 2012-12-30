@@ -33,7 +33,7 @@ import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.server.Server;
 
-public class RestartableServer extends Server implements QuorumListener {
+public class ManagedServer extends Server implements QuorumListener {
     protected QuorumServer quorumServer;
 
     @Override
@@ -42,8 +42,8 @@ public class RestartableServer extends Server implements QuorumListener {
             @Override
             public void processResponse(JLPCActor response) throws Exception {
                 quorumServer = (QuorumServer) response;
-                (new SubscribeQuorum(RestartableServer.this)).sendEvent(RestartableServer.this, quorumServer);
-                RestartableServer.super.startServer(out, rp);
+                (new SubscribeQuorum(ManagedServer.this)).sendEvent(ManagedServer.this, quorumServer);
+                ManagedServer.super.startServer(out, rp);
             }
         });
     }
