@@ -14,11 +14,17 @@ import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+
 public class ClusterManager extends ManagedServer implements ServerNameListener, ConfigListener {
     public static Logger logger = LoggerFactory.getLogger(ClusterManager.class);
 
     private ConfigServer configServer;
     private String configPrefix;
+    private HashMap<String, HashSet<String>> serverAddresses = new HashMap<String, HashSet<String>>();
+    private HashMap<String, String> serverConfigs = new HashMap<String, String>();
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
@@ -48,12 +54,37 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     public void serverNameAdded(String address, String name) throws Exception {
         if (!name.startsWith(configPrefix))
             return;
+        if (name.length() <= configPrefix.length()) {
+            logger.error("invalid server name (missing server name postfix): " + name);
+            return;
+        }
+        HashSet<String> saddresses = serverAddresses.get(name);
+        if (saddresses == null) {
+            saddresses = new HashSet<String>();
+            serverAddresses.put(name, saddresses);
+        }
+        saddresses.add(address);
+        if (!serverConfigs.containsKey(name) || saddresses.size() > 1)
+            shutdown(name, address);
     }
 
     @Override
     public void serverNameRemoved(String address, String name) throws Exception {
         if (!name.startsWith(configPrefix))
             return;
+        if (name.length() <= configPrefix.length()) {
+            logger.error("invalid server name (missing server name postfix): " + name);
+            return;
+        }
+        HashSet<String> saddresses = serverAddresses.get(name);
+        if (saddresses == null)
+            return;
+        saddresses.remove(address);
+        if (saddresses.isEmpty()) {
+            serverAddresses.remove(name);
+            if (serverConfigs.containsKey(name))
+                startup(name);
+        }
     }
 
     @Override
@@ -61,9 +92,31 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         if (!name.startsWith(configPrefix))
             return;
         if (name.length() <= configPrefix.length()) {
-            logger.error("invalid configuration name (missing server name): " + name);
+            logger.error("invalid configuration name (missing server name postfix): " + name);
             return;
         }
-        String sname = name.substring(configPrefix.length());
+        if (value.length() == 0) {
+            serverConfigs.remove(name);
+        } else {
+            serverConfigs.put(name, value);
+        }
+        if (!serverAddresses.containsKey(name)) {
+            startup(name);
+            return;
+        }
+        HashSet<String> saddresses = serverAddresses.get(name);
+        Iterator<String> it = saddresses.iterator();
+        while (it.hasNext()) {
+            String address = it.next();
+            shutdown(name, address);
+        }
+    }
+
+    private void startup(String name) throws Exception {
+
+    }
+
+    private void shutdown(String name, String address) throws Exception {
+
     }
 }
