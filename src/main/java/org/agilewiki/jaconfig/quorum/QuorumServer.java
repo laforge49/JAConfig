@@ -53,8 +53,9 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     private int totalHostCount;
     private boolean quorum;
     private HashSet<QuorumListener> listeners = new HashSet<QuorumListener>();
+    private String thcName;
 
-    protected String quarumServerName() {
+    protected String quorumServerName() {
         return startupArgs;
     }
 
@@ -65,6 +66,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
+        thcName = serverName() + "." + TOTAL_HOST_COUNT;
         String myAddress = agentChannelManager().agentChannelManagerAddress();
         int p = myAddress.indexOf(":");
         String myipa = myAddress.substring(0, p);
@@ -95,7 +97,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     @Override
     public void assigned(String name, String value) throws Exception {
         int oldthc = totalHostCount;
-        if (!TOTAL_HOST_COUNT.equals(name))
+        if (!thcName.equals(name))
             return;
         if (value.length() == 0) {
             totalHostCount = 0;
@@ -118,7 +120,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
 
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
-        if (!quarumServerName().equals(name))
+        if (!quorumServerName().equals(name))
             return;
         AgentChannel agentChannel = agentChannelManager().getAgentChannel(address);
         if (agentChannel == null)
@@ -137,7 +139,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
 
     @Override
     public void serverNameRemoved(String address, String name) throws Exception {
-        if (!quarumServerName().equals(name))
+        if (!quorumServerName().equals(name))
             return;
         int k = address.indexOf(':');
         String ipa = address.substring(0, k);
