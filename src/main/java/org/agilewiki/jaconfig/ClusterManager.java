@@ -114,7 +114,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         } else {
             serverConfigs.put(name, value);
         }
-        if (!serverAddresses.containsKey(name)) {
+        if (!serverAddresses.containsKey(name) && value.length() > 0) {
             startup(name);
             return;
         }
@@ -172,6 +172,20 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     private void shutdown(String name, String address) throws Exception {
+        if (agentChannelManager().isLocalAddress(address)) {
+            localShutdown(name);
+        } else {
+            System.out.println("todo--remote shutdown");
+        }
+    }
 
+    private void localShutdown(String name) throws Exception {
+        (new GetLocalServer(name)).send(this, agentChannelManager(), new RP<JLPCActor>() {
+            @Override
+            public void processResponse(JLPCActor response) throws Exception {
+                if (response != null)
+                    ((ManagedServer) response).close();
+            }
+        });
     }
 }
