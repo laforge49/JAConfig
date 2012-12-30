@@ -32,6 +32,7 @@ import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
+import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -88,6 +89,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     @Override
     public void close() {
         try {
+            (new UnsubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
             (new UnsubscribeConfig(this)).sendEvent(this, configServer);
         } catch (Exception ex) {
         }
