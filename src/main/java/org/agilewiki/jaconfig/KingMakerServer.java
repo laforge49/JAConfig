@@ -61,6 +61,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         } else {
             args = "";
         }
+        args = "clusterManager " + args;
         Node node = agentChannelManager().node;
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
         final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);

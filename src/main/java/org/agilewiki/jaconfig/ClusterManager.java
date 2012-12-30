@@ -18,11 +18,6 @@ public class ClusterManager extends ManagedServer implements ConfigListener {
     private String configPrefix;
 
     @Override
-    protected String serverName() {
-        return "clusterManager";
-    }
-
-    @Override
     public void assigned(String name, String value) throws Exception {
         if (!name.startsWith(configPrefix))
             return;

@@ -37,6 +37,24 @@ public class ManagedServer extends Server implements QuorumListener {
     protected QuorumServer quorumServer;
 
     @Override
+    protected String startupArgs() {
+        int i = super.startupArgs().indexOf(" ");
+        if (i > -1) {
+            return super.startupArgs().substring(i + 1);
+        } else
+            return "";
+    }
+
+    @Override
+    protected String serverName() {
+        int i = super.startupArgs().indexOf(" ");
+        if (i > -1) {
+            return super.startupArgs().substring(0, i);
+        } else
+            return super.startupArgs();
+    }
+
+    @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
         (new GetLocalServer("quorum")).send(this, agentChannelManager(), new RP<JLPCActor>() {
             @Override
