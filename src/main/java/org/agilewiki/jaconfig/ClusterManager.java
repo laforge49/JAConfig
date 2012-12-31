@@ -9,6 +9,8 @@ import org.agilewiki.jaconfig.rank.Ranking;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.JASocketFactories;
+import org.agilewiki.jasocket.agentChannel.AgentChannel;
+import org.agilewiki.jasocket.cluster.GetAgentChannel;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
@@ -33,6 +35,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     private String configPrefix;
     private HashMap<String, HashSet<String>> serverAddresses = new HashMap<String, HashSet<String>>();
     private HashMap<String, String> serverConfigs = new HashMap<String, String>();
+    private HashSet<String> restart = new HashSet<String>();
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
@@ -83,7 +86,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     @Override
-    public void serverNameRemoved(String address, String name) throws Exception {
+    public void serverNameRemoved(final String address, final String name) throws Exception {
         if (!name.startsWith(configPrefix))
             return;
         if (name.length() <= configPrefix.length()) {
@@ -97,7 +100,20 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         if (saddresses.isEmpty()) {
             serverAddresses.remove(name);
             if (serverConfigs.containsKey(name))
-                startup(name);
+                if (restart.contains(name))
+                    startup(name);
+                else if (agentChannelManager().isLocalAddress(address))
+                    logger.warn("down: " + name + " " + address);
+                else
+                    (new GetAgentChannel(address)).send(this, agentChannelManager(), new RP<AgentChannel>() {
+                        @Override
+                        public void processResponse(AgentChannel response) throws Exception {
+                            if (response == null)
+                                startup(name);
+                            else
+                                logger.warn("down: " + name + " " + address);
+                        }
+                    });
         }
     }
 
@@ -122,6 +138,8 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         Iterator<String> it = saddresses.iterator();
         while (it.hasNext()) {
             String address = it.next();
+            if (value.length() > 0)
+                restart.add(name);
             shutdown(name, address);
         }
     }
