@@ -180,7 +180,7 @@ public class ConfigServer extends Server implements ServerNameListener {
         tv.setValue(value);
         block.setCurrentPosition(0L);
         block.setRootJid(rootJid);
-        jFile.forcedWriteRootJid(block, maxSize());
+        jFile.writeRootJid(block, maxSize());
         AssignAgent assignAgent = (AssignAgent)
                 JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
         assignAgent.set(serverName(), name, timestamp, value);
