@@ -35,6 +35,7 @@ import org.agilewiki.jasocket.server.Server;
 
 public class ManagedServer extends Server implements QuorumListener {
     protected QuorumServer quorumServer;
+    protected boolean quorum = true;
 
     @Override
     protected String startupArgs() {
@@ -72,6 +73,7 @@ public class ManagedServer extends Server implements QuorumListener {
             (new UnsubscribeQuorum(this)).sendEvent(this, quorumServer);
         } catch (Exception ex) {
         }
+        quorum = false;
         super.close();
     }
 

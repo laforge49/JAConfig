@@ -10,15 +10,21 @@ import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
+import org.agilewiki.jasocket.agentChannel.ShipAgent;
 import org.agilewiki.jasocket.cluster.GetAgentChannel;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
+import org.agilewiki.jasocket.commands.HaltAgent;
+import org.agilewiki.jasocket.commands.HaltAgentFactory;
+import org.agilewiki.jasocket.commands.StartupAgent;
+import org.agilewiki.jasocket.commands.StartupAgentFactory;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.server.Startup;
 import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
+import org.agilewiki.jid.Jid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -155,13 +161,36 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                 if (agentChannelManager().isLocalAddress(address)) {
                     localStartup(name, args);
                 } else {
-                    System.out.println("todo--remote startup");
+                    (new GetAgentChannel(address)).send(ClusterManager.this, agentChannelManager(), new RP<AgentChannel>() {
+                        @Override
+                        public void processResponse(AgentChannel response) throws Exception {
+                            if (response == null) {
+                                if (quorum) {
+                                    startup(name);
+                                }
+                            } else {
+                                StartupAgent startupAgent = (StartupAgent) node().factory().newActor(
+                                        StartupAgentFactory.fac.actorType);
+                                startupAgent.setArgString(args);
+                                (new ShipAgent(startupAgent)).send(ClusterManager.this, response, new RP<Jid>() {
+                                    @Override
+                                    public void processResponse(Jid response) throws Exception {
+                                        PrintJid out = (PrintJid) response;
+                                        StringBuilder sb = new StringBuilder();
+                                        sb.append(args + ":\n");
+                                        out.appendto(sb);
+                                        logger.info(sb.toString().trim());
+                                    }
+                                });
+                            }
+                        }
+                    });
                 }
             }
         });
     }
 
-    private void localStartup(String name, String args) throws Exception {
+    private void localStartup(final String name, String args) throws Exception {
         int i = args.indexOf(' ');
         String serverClassName = args;
         if (i > -1) {
@@ -190,11 +219,29 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         });
     }
 
-    private void shutdown(String name, String address) throws Exception {
+    private void shutdown(final String name, String address) throws Exception {
         if (agentChannelManager().isLocalAddress(address)) {
             localShutdown(name);
         } else {
-            System.out.println("todo--remote shutdown");
+            (new GetAgentChannel(address)).send(ClusterManager.this, agentChannelManager(), new RP<AgentChannel>() {
+                @Override
+                public void processResponse(AgentChannel response) throws Exception {
+                    if (response != null) {
+                        HaltAgent startupAgent = (HaltAgent) node().factory().newActor(
+                                HaltAgentFactory.fac.actorType);
+                        (new ShipAgent(startupAgent)).send(ClusterManager.this, response, new RP<Jid>() {
+                            @Override
+                            public void processResponse(Jid response) throws Exception {
+                                PrintJid out = (PrintJid) response;
+                                StringBuilder sb = new StringBuilder();
+                                sb.append(name + ":\n");
+                                out.appendto(sb);
+                                logger.info(sb.toString().trim());
+                            }
+                        });
+                    }
+                }
+            });
         }
     }
 
