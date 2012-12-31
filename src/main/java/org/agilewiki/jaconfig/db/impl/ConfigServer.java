@@ -112,8 +112,6 @@ public class ConfigServer extends Server implements ServerNameListener {
                 StandardOpenOption.WRITE,
                 StandardOpenOption.CREATE);
         block = newDbBlock();
-        block.setCurrentPosition(0L);
-        block.setFileName(dbPath.toString());
         jFile.readRootJid(block, maxSize());
         if (block.isEmpty()) {
             JAFactory factory = (JAFactory) getAncestor(JAFactory.class);
@@ -181,9 +179,8 @@ public class ConfigServer extends Server implements ServerNameListener {
         tv.setTimestamp(timestamp);
         tv.setValue(value);
         block.setCurrentPosition(0L);
-        System.out.println("write");
+        block.setRootJid(rootJid);
         jFile.forcedWriteRootJid(block, maxSize());
-        System.out.println("wrote");
         AssignAgent assignAgent = (AssignAgent)
                 JAFactory.newActor(this, AssignAgentFactory.ASSIGN_AGENT, getMailbox(), this);
         assignAgent.set(serverName(), name, timestamp, value);
