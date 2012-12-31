@@ -15,6 +15,8 @@ public class SimpleRanker extends RankerServer {
         ServerNames.req.send(this, agentChannelManager(), new RP<TreeSet<String>>() {
             @Override
             public void processResponse(TreeSet<String> response) throws Exception {
+                ArrayList<String> ranking = new ArrayList<String>();
+                try {
                 HashMap<String, Integer> counts = new HashMap<String, Integer>();
                 Iterator<String> it1 = response.iterator();
                 while (it1.hasNext()) {
@@ -40,12 +42,15 @@ public class SimpleRanker extends RankerServer {
                     }
                     as.add(address);
                 }
-                ArrayList<String> ranking = new ArrayList<String>();
                 Iterator<Integer> it3 = addresses.keySet().iterator();
                 while (it3.hasNext()) {
                     Integer c = it3.next();
                     TreeSet<String> as = addresses.get(c);
                     ranking.addAll(as);
+                }
+                } catch (Exception x) {
+                    x.printStackTrace();
+                    throw x;
                 }
                 rp.processResponse(ranking);
             }

@@ -52,36 +52,6 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     private TreeSet<String> kingmakers = new TreeSet<String>();
     private TreeSet<String> clusterManagers = new TreeSet<String>();
 
-    private void startClusterManager() throws Exception {
-        String args = startupArgs();
-        int i = args.indexOf(' ');
-        String serverClassName = args;
-        if (i > -1) {
-            serverClassName = args.substring(0, i);
-            args = args.substring(i + 1).trim();
-        } else {
-            args = "";
-        }
-        args = "clusterManager " + args;
-        Node node = agentChannelManager().node;
-        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);
-        clusterManager = (ClusterManager) node.initializeServer(serverClass);
-        final PrintJid out = (PrintJid) node().factory().newActor(
-                JASocketFactories.PRINT_JID_FACTORY,
-                node().mailboxFactory().createMailbox());
-        Startup startup = new Startup(node, args, out);
-        startup.send(this, clusterManager, new RP<PrintJid>() {
-            @Override
-            public void processResponse(PrintJid response) throws Exception {
-                StringBuilder sb = new StringBuilder();
-                sb.append(serverClass.getName() + ":\n");
-                out.appendto(sb);
-                logger.info(sb.toString().trim());
-            }
-        });
-    }
-
     @Override
     protected String serverName() {
         return "kingmaker";
@@ -111,11 +81,13 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
 
     @Override
     public void serverNameRemoved(String address, String name) throws Exception {
-        if ("kingmaker".equals(name))
+        if ("kingmaker".equals(name)) {
             kingmakers.remove(address);
-        else if ("clusterManager".equals(name))
+            perform();
+        } else if ("clusterManager".equals(name)) {
             clusterManagers.remove(address);
-        perform();
+            perform();
+        }
     }
 
     @Override
@@ -130,7 +102,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         if (clusterManagers.size() == 1)
             return;
         if (clusterManagers.isEmpty()) {
-            if (agentChannelManager().isLocalAddress(kingmakers.first())) {
+            if (kingmakers.isEmpty() || agentChannelManager().isLocalAddress(kingmakers.first())) {
                 startClusterManager();
             }
         } else if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
@@ -138,6 +110,36 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
                 clusterManager.close();
             }
         }
+    }
+
+    private void startClusterManager() throws Exception {
+        String args = startupArgs();
+        int i = args.indexOf(' ');
+        String serverClassName = args;
+        if (i > -1) {
+            serverClassName = args.substring(0, i);
+            args = args.substring(i + 1).trim();
+        } else {
+            args = "";
+        }
+        args = "clusterManager " + args;
+        Node node = agentChannelManager().node;
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);
+        clusterManager = (ClusterManager) node.initializeServer(serverClass);
+        final PrintJid out = (PrintJid) node().factory().newActor(
+                JASocketFactories.PRINT_JID_FACTORY,
+                node().mailboxFactory().createMailbox());
+        Startup startup = new Startup(node, args, out);
+        startup.send(this, clusterManager, new RP<PrintJid>() {
+            @Override
+            public void processResponse(PrintJid response) throws Exception {
+                StringBuilder sb = new StringBuilder();
+                sb.append(serverClass.getName() + ":\n");
+                out.appendto(sb);
+                logger.info(sb.toString().trim());
+            }
+        });
     }
 
     public static void main(String[] args) throws Exception {

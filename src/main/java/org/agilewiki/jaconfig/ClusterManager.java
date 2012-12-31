@@ -153,7 +153,6 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
 
     private void startup(final String name) throws Exception {
         final String args = serverConfigs.get(name);
-        Thread.sleep(1000);
         Ranking.req.send(this, rankerServer, new RP<List<String>>() {
             @Override
             public void processResponse(List<String> response) throws Exception {
