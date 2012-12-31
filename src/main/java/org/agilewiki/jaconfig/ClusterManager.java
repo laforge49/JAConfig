@@ -130,8 +130,9 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         } else {
             serverConfigs.put(name, value);
         }
-        if (!serverAddresses.containsKey(name) && value.length() > 0) {
-            startup(name);
+        if (!serverAddresses.containsKey(name)) {
+            if (value.length() > 0)
+                startup(name);
             return;
         }
         HashSet<String> saddresses = serverAddresses.get(name);
