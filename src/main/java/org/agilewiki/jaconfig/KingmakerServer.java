@@ -44,8 +44,8 @@ import org.slf4j.LoggerFactory;
 
 import java.util.TreeSet;
 
-public class XServer extends Server implements ServerNameListener, QuorumListener {
-    public static Logger logger = LoggerFactory.getLogger(XServer.class);
+public class KingmakerServer extends Server implements ServerNameListener, QuorumListener {
+    public static Logger logger = LoggerFactory.getLogger(KingmakerServer.class);
 
     private boolean quorum;
     private ClusterManager clusterManager;
@@ -63,8 +63,8 @@ public class XServer extends Server implements ServerNameListener, QuorumListene
         (new GetLocalServer("quorum")).send(this, agentChannelManager(), new RP<JLPCActor>() {
             @Override
             public void processResponse(JLPCActor response) throws Exception {
-                (new SubscribeQuorum(XServer.this)).sendEvent(XServer.this, response);
-                XServer.super.startServer(out, rp);
+                (new SubscribeQuorum(KingmakerServer.this)).sendEvent(KingmakerServer.this, response);
+                KingmakerServer.super.startServer(out, rp);
             }
         });
     }
@@ -149,7 +149,7 @@ public class XServer extends Server implements ServerNameListener, QuorumListene
             node.startup(ConfigServer.class, "");
             node.startup(SimpleRanker.class, "");
             node.startup(QuorumServer.class, "kingmaker");
-            node.startup(XServer.class, ClusterManager.class.getName());
+            node.startup(KingmakerServer.class, ClusterManager.class.getName());
             (new ConsoleApp()).create(node);
         } catch (Exception ex) {
             node.mailboxFactory().close();
