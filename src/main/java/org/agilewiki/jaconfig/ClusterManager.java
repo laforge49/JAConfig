@@ -201,7 +201,14 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         args = name + " " + args;
         Node node = agentChannelManager().node;
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);
+        Class<Server> sc = null;
+        try {
+            sc = (Class<Server>) classLoader.loadClass(serverClassName);
+        } catch (Exception ex) {
+            logger.error("config error, name=" + name + " args=" + args, ex);
+            return;
+        }
+        final Class<Server> serverClass = sc;
         ManagedServer managedServer = (ManagedServer) node.initializeServer(serverClass);
         final PrintJid out = (PrintJid) node().factory().newActor(
                 JASocketFactories.PRINT_JID_FACTORY,
