@@ -84,11 +84,9 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     public void serverNameRemoved(String address, String name) throws Exception {
         if ("kingmaker".equals(name)) {
             kingmakers.remove(address);
-            System.err.println("*************************************************************removed kingmaker");
             perform();
         } else if ("clusterManager".equals(name)) {
             clusterManagers.remove(address);
-            System.err.println("*************************************************************removed clusterManager");
             perform();
         }
     }
@@ -107,23 +105,19 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         if (clusterManagers.isEmpty()) {
             if (kingmakers.isEmpty() || agentChannelManager().isLocalAddress(kingmakers.first())) {
                 startClusterManager();
-                System.err.println("*************************************************************start clusterManager");
             }
         } else if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
             if (!agentChannelManager().isLocalAddress(clusterManagers.last())) {
                 clusterManager.close();
-                System.err.println("*************************************************************close clusterManager");
             }
         }
     }
 
     private void startClusterManager() throws Exception {
         if (starting) {
-            System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^already started");
             return;
         }
         starting = true;
-        System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^starting");
         String args = startupArgs();
         int i = args.indexOf(' ');
         String serverClassName = args;
@@ -150,7 +144,6 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
                 out.appendto(sb);
                 logger.info(sb.toString().trim());
                 starting = false;
-                System.out.println("^^^^^^^^^^^^^^^^^^^^^^^^^^^finished starting");
             }
         });
     }

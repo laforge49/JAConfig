@@ -87,8 +87,10 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             serverAddresses.put(name, saddresses);
         }
         saddresses.add(address);
-        if (!serverConfigs.containsKey(name) || saddresses.size() > 1)
+        if (!serverConfigs.containsKey(name) || saddresses.size() > 1) {
+            logger.warn("shutdown duplicate " + name + address);
             shutdown(name, address);
+        }
     }
 
     @Override
@@ -169,8 +171,15 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                                 }
                             } else {
                                 StartupAgent startupAgent = (StartupAgent) node().factory().newActor(
-                                        StartupAgentFactory.fac.actorType);
-                                startupAgent.setArgString(args);
+                                        StartupAgentFactory.fac.actorType, getMailbox());
+                                int i = args.indexOf(' ');
+                                String serverClassName = args;
+                                String a = "";
+                                if (i > -1) {
+                                    serverClassName = args.substring(0, i);
+                                    a = args.substring(i + 1).trim();
+                                }
+                                startupAgent.setArgString(serverClassName + " " + name + " " + a);
                                 (new ShipAgent(startupAgent)).send(ClusterManager.this, response, new RP<Jid>() {
                                     @Override
                                     public void processResponse(Jid response) throws Exception {
