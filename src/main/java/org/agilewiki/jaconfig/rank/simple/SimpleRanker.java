@@ -1,5 +1,6 @@
 package org.agilewiki.jaconfig.rank.simple;
 
+import org.agilewiki.jaconfig.cluster.JACNode;
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.rank.RankerServer;
 import org.agilewiki.jactor.RP;
@@ -58,7 +59,7 @@ public class SimpleRanker extends RankerServer {
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
+        Node node = new JACNode(args, 100);
         try {
             node.process();
             node.startup(ConfigServer.class, "");

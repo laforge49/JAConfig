@@ -23,6 +23,7 @@
  */
 package org.agilewiki.jaconfig;
 
+import org.agilewiki.jaconfig.cluster.JACNode;
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.quorum.QuorumListener;
 import org.agilewiki.jaconfig.quorum.QuorumServer;
@@ -149,7 +150,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
+        Node node = new JACNode(args, 100);
         try {
             node.process();
             node.startup(ConfigServer.class, "");

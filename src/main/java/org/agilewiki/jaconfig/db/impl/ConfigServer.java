@@ -23,6 +23,7 @@
  */
 package org.agilewiki.jaconfig.db.impl;
 
+import org.agilewiki.jaconfig.cluster.JACNode;
 import org.agilewiki.jaconfig.db.Assigned;
 import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jactor.RP;
@@ -242,7 +243,7 @@ public class ConfigServer extends Server implements ServerNameListener {
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
+        Node node = new JACNode(args, 100);
         try {
             node.process();
             node.startup(ConfigServer.class, "");

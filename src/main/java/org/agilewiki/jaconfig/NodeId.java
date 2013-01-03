@@ -23,6 +23,7 @@
  */
 package org.agilewiki.jaconfig;
 
+import org.agilewiki.jaconfig.cluster.JACNode;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
@@ -38,7 +39,7 @@ public class NodeId extends Server {
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
+        Node node = new JACNode(args, 100);
         try {
             node.process();
             node.startup(NodeId.class, "");
