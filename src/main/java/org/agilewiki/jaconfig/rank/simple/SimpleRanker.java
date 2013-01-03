@@ -1,6 +1,5 @@
 package org.agilewiki.jaconfig.rank.simple;
 
-import org.agilewiki.jaconfig.cluster.JACNode;
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.rank.RankerServer;
 import org.agilewiki.jactor.RP;
@@ -18,37 +17,37 @@ public class SimpleRanker extends RankerServer {
             public void processResponse(TreeSet<String> response) throws Exception {
                 ArrayList<String> ranking = new ArrayList<String>();
                 try {
-                HashMap<String, Integer> counts = new HashMap<String, Integer>();
-                Iterator<String> it1 = response.iterator();
-                while (it1.hasNext()) {
-                    String raw = it1.next();
-                    int i = raw.indexOf(' ');
-                    String address = raw.substring(0, i);
-                    Integer c = counts.get(address);
-                    if (c == null)
-                        c = new Integer(1);
-                    else
-                        c = c + 1;
-                    counts.put(address, c);
-                }
-                HashMap<Integer, TreeSet<String>> addresses = new HashMap<Integer, TreeSet<String>>();
-                Iterator<String> it2 = counts.keySet().iterator();
-                while (it2.hasNext()) {
-                    String address = it2.next();
-                    Integer c = counts.get(address);
-                    TreeSet<String> as = addresses.get(c);
-                    if (as == null) {
-                        as = new TreeSet<String>();
-                        addresses.put(c, as);
+                    HashMap<String, Integer> counts = new HashMap<String, Integer>();
+                    Iterator<String> it1 = response.iterator();
+                    while (it1.hasNext()) {
+                        String raw = it1.next();
+                        int i = raw.indexOf(' ');
+                        String address = raw.substring(0, i);
+                        Integer c = counts.get(address);
+                        if (c == null)
+                            c = new Integer(1);
+                        else
+                            c = c + 1;
+                        counts.put(address, c);
                     }
-                    as.add(address);
-                }
-                Iterator<Integer> it3 = addresses.keySet().iterator();
-                while (it3.hasNext()) {
-                    Integer c = it3.next();
-                    TreeSet<String> as = addresses.get(c);
-                    ranking.addAll(as);
-                }
+                    HashMap<Integer, TreeSet<String>> addresses = new HashMap<Integer, TreeSet<String>>();
+                    Iterator<String> it2 = counts.keySet().iterator();
+                    while (it2.hasNext()) {
+                        String address = it2.next();
+                        Integer c = counts.get(address);
+                        TreeSet<String> as = addresses.get(c);
+                        if (as == null) {
+                            as = new TreeSet<String>();
+                            addresses.put(c, as);
+                        }
+                        as.add(address);
+                    }
+                    Iterator<Integer> it3 = addresses.keySet().iterator();
+                    while (it3.hasNext()) {
+                        Integer c = it3.next();
+                        TreeSet<String> as = addresses.get(c);
+                        ranking.addAll(as);
+                    }
                 } catch (Exception x) {
                     x.printStackTrace();
                     throw x;
@@ -59,7 +58,7 @@ public class SimpleRanker extends RankerServer {
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new JACNode(args, 100);
+        Node node = new Node(args, 100);
         try {
             node.process();
             node.startup(ConfigServer.class, "");

@@ -23,7 +23,6 @@
  */
 package org.agilewiki.jaconfig.quorum;
 
-import org.agilewiki.jaconfig.cluster.JACNode;
 import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jaconfig.db.SubscribeConfig;
 import org.agilewiki.jaconfig.db.UnsubscribeConfig;
@@ -42,6 +41,7 @@ import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -56,6 +56,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     private boolean quorum;
     private HashSet<QuorumListener> listeners = new HashSet<QuorumListener>();
     private String thcName;
+    private ArrayDeque<StartupEntry> startupQueue = new ArrayDeque();
 
     protected String quorumServerName() {
         return startupArgs();
@@ -164,6 +165,8 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     }
 
     public void setQuorum(boolean quorum) throws Exception {
+        if (!quorum)
+            startupQueue.clear();
         this.quorum = quorum;
         logger.info("quorum: " + quorum + " hosts=" + hosts.size() + " quorum=" + (totalHostCount / 2 + 1));
         Iterator<QuorumListener> it = listeners.iterator();
@@ -174,7 +177,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new JACNode(args, 100);
+        Node node = new Node(args, 100);
         try {
             node.process();
             node.startup(ConfigServer.class, "");
@@ -184,5 +187,8 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
             node.mailboxFactory().close();
             throw ex;
         }
+    }
+
+    void processStartupEntry() throws Exception {
     }
 }

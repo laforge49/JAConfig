@@ -21,31 +21,25 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig;
+package org.agilewiki.jaconfig.quorum;
 
-import org.agilewiki.jasocket.node.ConsoleApp;
-import org.agilewiki.jasocket.node.Node;
-import org.agilewiki.jasocket.server.Server;
+import org.agilewiki.jaconfig.cluster.JACChannelManager;
+import org.agilewiki.jactor.Actor;
+import org.agilewiki.jactor.RP;
+import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jactor.lpc.Request;
 
-public class NodeId extends Server {
+public class ProcessStartupEntry extends Request<Object, QuorumServer> {
+    public static final ProcessStartupEntry req = new ProcessStartupEntry();
+
     @Override
-    protected String serverName() {
-        String[] args = node().args();
-        if (args.length > 1) {
-            return "node." + args[1];
-        } else
-            return "node.default";
+    public boolean isTargetType(Actor actor) {
+        return actor instanceof JACChannelManager;
     }
 
-    public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
-        try {
-            node.process();
-            node.startup(NodeId.class, "");
-            (new ConsoleApp()).create(node);
-        } catch (Exception ex) {
-            node.mailboxFactory().close();
-            throw ex;
-        }
+    @Override
+    public void processRequest(JLPCActor jlpcActor, RP rp) throws Exception {
+        ((QuorumServer) jlpcActor).processStartupEntry();
+        rp.processResponse(null);
     }
 }

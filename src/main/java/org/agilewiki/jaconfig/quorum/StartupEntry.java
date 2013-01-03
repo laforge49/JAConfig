@@ -21,31 +21,28 @@
  * A copy of this license is also included and can be
  * found as well at http://www.opensource.org/licenses/cpl1.0.txt
  */
-package org.agilewiki.jaconfig;
+package org.agilewiki.jaconfig.quorum;
 
-import org.agilewiki.jasocket.node.ConsoleApp;
-import org.agilewiki.jasocket.node.Node;
-import org.agilewiki.jasocket.server.Server;
+import org.agilewiki.jactor.RP;
+import org.agilewiki.jasocket.jid.PrintJid;
 
-public class NodeId extends Server {
-    @Override
-    protected String serverName() {
-        String[] args = node().args();
-        if (args.length > 1) {
-            return "node." + args[1];
-        } else
-            return "node.default";
-    }
+public class StartupEntry {
+    public String serverName;
+    public String className;
+    public String serverArgs;
+    public String rankerName;
+    public RP rp;
 
-    public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
-        try {
-            node.process();
-            node.startup(NodeId.class, "");
-            (new ConsoleApp()).create(node);
-        } catch (Exception ex) {
-            node.mailboxFactory().close();
-            throw ex;
-        }
+    public StartupEntry(
+            String serverName,
+            String className,
+            String serverArgs,
+            String rankerName,
+            RP<PrintJid> rp) {
+        this.serverName = serverName;
+        this.className = className;
+        this.serverArgs = serverArgs;
+        this.rankerName = rankerName;
+        this.rp = rp;
     }
 }
