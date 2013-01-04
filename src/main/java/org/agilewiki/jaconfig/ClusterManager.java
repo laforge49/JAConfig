@@ -4,11 +4,9 @@ import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jaconfig.db.SubscribeConfig;
 import org.agilewiki.jaconfig.db.UnsubscribeConfig;
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
-import org.agilewiki.jaconfig.rank.RankerServer;
-import org.agilewiki.jaconfig.rank.Ranking;
+import org.agilewiki.jaconfig.quorum.StartupServer;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
-import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.agentChannel.ShipAgent;
 import org.agilewiki.jasocket.cluster.GetAgentChannel;
@@ -17,12 +15,7 @@ import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
 import org.agilewiki.jasocket.commands.HaltAgent;
 import org.agilewiki.jasocket.commands.HaltAgentFactory;
-import org.agilewiki.jasocket.commands.StartupAgent;
-import org.agilewiki.jasocket.commands.StartupAgentFactory;
 import org.agilewiki.jasocket.jid.PrintJid;
-import org.agilewiki.jasocket.node.Node;
-import org.agilewiki.jasocket.server.Server;
-import org.agilewiki.jasocket.server.Startup;
 import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
 import org.agilewiki.jid.Jid;
 import org.slf4j.Logger;
@@ -31,13 +24,11 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 
 public class ClusterManager extends ManagedServer implements ServerNameListener, ConfigListener {
     public static Logger logger = LoggerFactory.getLogger(ClusterManager.class);
 
     private ConfigServer configServer;
-    private RankerServer rankerServer;
     private String configPrefix;
     private HashMap<String, HashSet<String>> serverAddresses = new HashMap<String, HashSet<String>>();
     private HashMap<String, String> serverConfigs = new HashMap<String, String>();
@@ -52,13 +43,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             public void processResponse(JLPCActor response) throws Exception {
                 configServer = (ConfigServer) response;
                 (new SubscribeConfig(ClusterManager.this)).sendEvent(ClusterManager.this, configServer);
-                (new GetLocalServer("ranker")).send(ClusterManager.this, agentChannelManager(), new RP<JLPCActor>() {
-                    @Override
-                    public void processResponse(JLPCActor response) throws Exception {
-                        rankerServer = (RankerServer) response;
-                        ClusterManager.super.startServer(out, rp);
-                    }
-                });
+                ClusterManager.super.startServer(out, rp);
             }
         });
     }
@@ -154,84 +139,16 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     private void startup(final String name) throws Exception {
-        final String args = serverConfigs.get(name);
-        Ranking.req.send(this, rankerServer, new RP<List<String>>() {
-            @Override
-            public void processResponse(List<String> response) throws Exception {
-                String address = response.get(0);
-                if (agentChannelManager().isLocalAddress(address)) {
-                    localStartup(name, args);
-                } else {
-                    (new GetAgentChannel(address)).send(ClusterManager.this, agentChannelManager(), new RP<AgentChannel>() {
-                        @Override
-                        public void processResponse(AgentChannel response) throws Exception {
-                            if (response == null) {
-                                if (quorum) {
-                                    startup(name);
-                                }
-                            } else {
-                                StartupAgent startupAgent = (StartupAgent) node().factory().newActor(
-                                        StartupAgentFactory.fac.actorType, getMailbox());
-                                int i = args.indexOf(' ');
-                                String serverClassName = args;
-                                String a = "";
-                                if (i > -1) {
-                                    serverClassName = args.substring(0, i);
-                                    a = args.substring(i + 1).trim();
-                                }
-                                startupAgent.setArgString(serverClassName + " " + name + " " + a);
-                                (new ShipAgent(startupAgent)).send(ClusterManager.this, response, new RP<Jid>() {
-                                    @Override
-                                    public void processResponse(Jid response) throws Exception {
-                                        PrintJid out = (PrintJid) response;
-                                        StringBuilder sb = new StringBuilder();
-                                        sb.append(args + ":\n");
-                                        out.appendto(sb);
-                                        logger.info(sb.toString().trim());
-                                    }
-                                });
-                            }
-                        }
-                    });
-                }
-            }
-        });
-    }
-
-    private void localStartup(final String name, String args) throws Exception {
+        String args = serverConfigs.get(name);
+        String serverClass = args;
+        String serverArgs = "";
         int i = args.indexOf(' ');
-        String serverClassName = args;
         if (i > -1) {
-            serverClassName = args.substring(0, i);
-            args = args.substring(i + 1).trim();
-        } else {
-            args = "";
+            serverClass = args.substring(0, i);
+            serverArgs = args.substring(i + 1).trim();
         }
-        args = name + " " + args;
-        Node node = agentChannelManager().node;
-        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        Class<Server> sc = null;
-        try {
-            sc = (Class<Server>) classLoader.loadClass(serverClassName);
-        } catch (Exception ex) {
-            logger.error("config error, name=" + name + " args=" + args, ex);
-            return;
-        }
-        final Class<Server> serverClass = sc;
-        ManagedServer managedServer = (ManagedServer) node.initializeServer(serverClass);
-        final PrintJid out = (PrintJid) node().factory().newActor(
-                JASocketFactories.PRINT_JID_FACTORY,
-                node().mailboxFactory().createMailbox());
-        Startup startup = new Startup(node, args, out);
-        startup.send(this, managedServer, new RP<PrintJid>() {
-            @Override
-            public void processResponse(PrintJid response) throws Exception {
-                StringBuilder sb = new StringBuilder();
-                sb.append(serverClass.getName() + ":\n");
-                out.appendto(sb);
-                logger.info(sb.toString().trim());
-            }
-        });
+        StartupServer startupServer = new StartupServer(name, serverClass, serverArgs, "ranker");
+        startupServer.sendEvent(this, quorumServer);
     }
 
     private void shutdown(final String name, String address) throws Exception {
@@ -243,7 +160,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                 public void processResponse(AgentChannel response) throws Exception {
                     if (response != null) {
                         HaltAgent startupAgent = (HaltAgent) node().factory().newActor(
-                                HaltAgentFactory.fac.actorType);
+                                HaltAgentFactory.fac.actorType, getMailbox());
                         (new ShipAgent(startupAgent)).send(ClusterManager.this, response, new RP<Jid>() {
                             @Override
                             public void processResponse(Jid response) throws Exception {
