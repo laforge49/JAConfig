@@ -31,7 +31,11 @@ import org.agilewiki.jactor.lpc.Request;
 import java.util.List;
 
 public class Ranking extends Request<List<String>, RankerServer> {
-    public static final Ranking req = new Ranking();
+    private String serverName;
+
+    public Ranking(String serverName) {
+        this.serverName = serverName;
+    }
 
     @Override
     public boolean isTargetType(Actor targetActor) {
@@ -40,6 +44,6 @@ public class Ranking extends Request<List<String>, RankerServer> {
 
     @Override
     public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
-        ((RankerServer) targetActor).ranking(rp);
+        ((RankerServer) targetActor).ranking(serverName, rp);
     }
 }

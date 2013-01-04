@@ -11,7 +11,7 @@ import java.util.*;
 
 public class SimpleRanker extends RankerServer {
     @Override
-    public void ranking(final RP<List<String>> rp) throws Exception {
+    public void ranking(String serverName, final RP<List<String>> rp) throws Exception {
         ServerNames.req.send(this, agentChannelManager(), new RP<TreeSet<String>>() {
             @Override
             public void processResponse(TreeSet<String> response) throws Exception {

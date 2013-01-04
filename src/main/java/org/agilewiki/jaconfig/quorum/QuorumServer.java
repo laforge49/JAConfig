@@ -226,7 +226,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
                     return;
                 }
                 RankerServer rankerServer = (RankerServer) response;
-                Ranking.req.send(QuorumServer.this, rankerServer, new RP<List<String>>() {
+                (new Ranking(startupEntry.serverName)).send(QuorumServer.this, rankerServer, new RP<List<String>>() {
                     @Override
                     public void processResponse(List<String> strings) throws Exception {
                         if (!quorum)

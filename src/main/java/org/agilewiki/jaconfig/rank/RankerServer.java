@@ -32,7 +32,7 @@ import java.util.Iterator;
 import java.util.List;
 
 abstract public class RankerServer extends Server {
-    abstract public void ranking(RP<List<String>> rp) throws Exception;
+    abstract public void ranking(String serverName, RP<List<String>> rp) throws Exception;
 
     @Override
     protected String serverName() {
@@ -43,7 +43,7 @@ abstract public class RankerServer extends Server {
         registerServerCommand(new ServerCommand("nodes", "list nodes, least busy first") {
             @Override
             public void eval(String args, final PrintJid out, final RP<PrintJid> rp) throws Exception {
-                ranking(new RP<List<String>>() {
+                ranking(args, new RP<List<String>>() {
                     @Override
                     public void processResponse(List<String> response) throws Exception {
                         Iterator<String> it = response.iterator();
