@@ -23,28 +23,37 @@
  */
 package org.agilewiki.jaconfig.quorum;
 
+import org.agilewiki.jaconfig.ManagedServer;
 import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jaconfig.db.SubscribeConfig;
 import org.agilewiki.jaconfig.db.UnsubscribeConfig;
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
+import org.agilewiki.jaconfig.rank.RankerServer;
+import org.agilewiki.jaconfig.rank.Ranking;
+import org.agilewiki.jactor.ExceptionHandler;
 import org.agilewiki.jactor.RP;
+import org.agilewiki.jactor.factory.JAFactory;
 import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
+import org.agilewiki.jasocket.agentChannel.ShipAgent;
+import org.agilewiki.jasocket.cluster.GetAgentChannel;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
+import org.agilewiki.jasocket.commands.StartupAgent;
+import org.agilewiki.jasocket.commands.StartupAgentFactory;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
+import org.agilewiki.jasocket.server.Startup;
 import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
+import org.agilewiki.jid.Jid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayDeque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
+import java.util.*;
 
 public class QuorumServer extends Server implements ServerNameListener, ConfigListener {
     public static final String TOTAL_HOST_COUNT = "totalHostCount";
@@ -176,6 +185,131 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         }
     }
 
+    public void startupServer(StartupEntry startupEntry) throws Exception {
+        if (!quorum)
+            return;
+        startupQueue.addLast(startupEntry);
+        if (startupQueue.size() > 1)
+            return;
+        ProcessStartupEntry.req.sendEvent(this, this);
+    }
+
+    void processStartupEntry() throws Exception {
+        if (!quorum)
+            return;
+        if (startupQueue.size() == 0)
+            return;
+        final StartupEntry startupEntry = startupQueue.peekFirst();
+        setExceptionHandler(new ExceptionHandler() {
+            @Override
+            public void process(Exception e) throws Exception {
+                if (!quorum)
+                    return;
+                processNextStartupEntry();
+                startupEntry.rp.processResponse(e);
+            }
+        });
+        final String rankerName = startupEntry.rankerName;
+        (new GetLocalServer(rankerName)).send(this, agentChannelManager(), new RP<JLPCActor>() {
+            @Override
+            public void processResponse(JLPCActor response) throws Exception {
+                if (!quorum)
+                    return;
+                if (response == null) {
+                    PrintJid out = (PrintJid) JAFactory.newActor(
+                            QuorumServer.this,
+                            JASocketFactories.PRINT_JID_FACTORY,
+                            getMailboxFactory().createMailbox());
+                    out.println("unknown ranker server: " + rankerName);
+                    startupEntry.rp.processResponse(out);
+                    processNextStartupEntry();
+                    return;
+                }
+                RankerServer rankerServer = (RankerServer) response;
+                Ranking.req.send(QuorumServer.this, rankerServer, new RP<List<String>>() {
+                    @Override
+                    public void processResponse(List<String> strings) throws Exception {
+                        if (!quorum)
+                            return;
+                        String address = strings.get(0);
+                        if (agentChannelManager().isLocalAddress(address)) {
+                            localStartup(startupEntry);
+                        } else {
+                            remoteStartup(startupEntry, address);
+                        }
+                    }
+                });
+            }
+        });
+    }
+
+    private void localStartup(StartupEntry startupEntry) throws Exception {
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        Class<Server> sc = null;
+        try {
+            sc = (Class<Server>) classLoader.loadClass(startupEntry.className);
+        } catch (Exception ex) {
+            logger.error("startup error, name=" + startupEntry.serverName, ex);
+            processNextStartupEntry();
+            return;
+        }
+        final Class<Server> serverClass = sc;
+        Node node = agentChannelManager().node;
+        ManagedServer managedServer = (ManagedServer) node.initializeServer(serverClass);
+        final PrintJid out = (PrintJid) node().factory().newActor(
+                JASocketFactories.PRINT_JID_FACTORY,
+                node().mailboxFactory().createMailbox());
+        Startup startup = new Startup(node, startupEntry.serverName + " " + startupEntry.serverArgs, out);
+        startup.send(this, managedServer, new RP<PrintJid>() {
+            @Override
+            public void processResponse(PrintJid response) throws Exception {
+                if (!quorum)
+                    return;
+                StringBuilder sb = new StringBuilder();
+                sb.append(serverClass.getName() + ":\n");
+                out.appendto(sb);
+                logger.info(sb.toString().trim());
+                processNextStartupEntry();
+            }
+        });
+    }
+
+    private void remoteStartup(final StartupEntry startupEntry, String address) throws Exception {
+        (new GetAgentChannel(address)).send(this, agentChannelManager(), new RP<AgentChannel>() {
+            @Override
+            public void processResponse(AgentChannel response) throws Exception {
+                if (!quorum)
+                    return;
+                if (response == null) {
+                    ProcessStartupEntry.req.sendEvent(QuorumServer.this, QuorumServer.this);
+                    return;
+                }
+                StartupAgent startupAgent = (StartupAgent) node().factory().newActor(
+                        StartupAgentFactory.fac.actorType, getMailbox());
+                startupAgent.setArgString(
+                        startupEntry.className + " " + startupEntry.serverName + " " + startupEntry.serverArgs);
+                (new ShipAgent(startupAgent)).send(QuorumServer.this, response, new RP<Jid>() {
+                    @Override
+                    public void processResponse(Jid response) throws Exception {
+                        if (!quorum)
+                            return;
+                        PrintJid out = (PrintJid) response;
+                        StringBuilder sb = new StringBuilder();
+                        sb.append(startupEntry.serverName + ":\n");
+                        out.appendto(sb);
+                        logger.info(sb.toString().trim());
+                        processNextStartupEntry();
+                    }
+                });
+            }
+        });
+    }
+
+    private void processNextStartupEntry() throws Exception {
+        startupQueue.removeFirst();
+        ProcessStartupEntry.req.sendEvent(this, this);
+    }
+
     public static void main(String[] args) throws Exception {
         Node node = new Node(args, 100);
         try {
@@ -187,8 +321,5 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
             node.mailboxFactory().close();
             throw ex;
         }
-    }
-
-    void processStartupEntry() throws Exception {
     }
 }

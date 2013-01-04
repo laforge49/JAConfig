@@ -27,9 +27,18 @@ import org.agilewiki.jactor.Actor;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jactor.lpc.Request;
+import org.agilewiki.jid.Jid;
 
-public class ProcessStartupEntry extends Request<Object, QuorumServer> {
-    public static final ProcessStartupEntry req = new ProcessStartupEntry();
+public class StartupServer extends Request<Jid, QuorumServer> {
+    StartupEntry startupEntry;
+
+    public StartupServer(
+            String serverName,
+            String className,
+            String serverArgs,
+            String rankerName) {
+        startupEntry = new StartupEntry(serverName, className, serverArgs, rankerName, null);
+    }
 
     @Override
     public boolean isTargetType(Actor actor) {
@@ -38,7 +47,7 @@ public class ProcessStartupEntry extends Request<Object, QuorumServer> {
 
     @Override
     public void processRequest(JLPCActor jlpcActor, RP rp) throws Exception {
-        ((QuorumServer) jlpcActor).processStartupEntry();
-        rp.processResponse(null);
+        startupEntry.rp = rp;
+        ((QuorumServer) jlpcActor).startupServer(startupEntry);
     }
 }
