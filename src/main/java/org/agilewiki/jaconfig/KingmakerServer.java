@@ -72,12 +72,13 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
 
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
-        if ("kingmaker".equals(name))
+        if ("kingmaker".equals(name)) {
             kingmakers.add(address);
-        else if ("clusterManager".equals(name))
+            perform();
+        } else if ("clusterManager".equals(name)) {
             clusterManagers.add(address);
-        if (!quorum)
-            return;
+            perform();
+        }
     }
 
     @Override
@@ -98,6 +99,12 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     }
 
     private void perform() throws Exception {
+        if (!quorum) {
+            if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+                clusterManager.close();
+            }
+            return;
+        }
         if (!quorum)
             return;
         if (clusterManagers.size() == 1)
