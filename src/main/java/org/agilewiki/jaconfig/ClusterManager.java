@@ -13,8 +13,8 @@ import org.agilewiki.jasocket.cluster.GetAgentChannel;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
-import org.agilewiki.jasocket.commands.HaltAgent;
-import org.agilewiki.jasocket.commands.HaltAgentFactory;
+import org.agilewiki.jasocket.commands.ServerEvalAgent;
+import org.agilewiki.jasocket.commands.ServerEvalAgentFactory;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
 import org.agilewiki.jid.Jid;
@@ -159,9 +159,10 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                 @Override
                 public void processResponse(AgentChannel response) throws Exception {
                     if (response != null) {
-                        HaltAgent startupAgent = (HaltAgent) node().factory().newActor(
-                                HaltAgentFactory.fac.actorType, getMailbox());
-                        (new ShipAgent(startupAgent)).send(ClusterManager.this, response, new RP<Jid>() {
+                        ServerEvalAgent serverEvalAgent = (ServerEvalAgent) node().factory().newActor(
+                                ServerEvalAgentFactory.fac.actorType, getMailbox());
+                        serverEvalAgent.setArgString("shutdown");
+                        (new ShipAgent(serverEvalAgent)).send(ClusterManager.this, response, new RP<Jid>() {
                             @Override
                             public void processResponse(Jid response) throws Exception {
                                 PrintJid out = (PrintJid) response;
