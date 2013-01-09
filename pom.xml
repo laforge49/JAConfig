@@ -5,7 +5,7 @@
 
     <groupId>org.agilewiki.jaconfig</groupId>
     <artifactId>jaconfig</artifactId>
-    <version>0.1.0.0</version>
+    <version>0.2.0.0</version>
     <packaging>jar</packaging>
     <name>JAConfig</name>
     <description>Cluster management.</description>

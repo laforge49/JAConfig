@@ -35,15 +35,17 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     private HashSet<String> restart = new HashSet<String>();
 
     @Override
-    protected void startServer(final PrintJid out, final RP rp) throws Exception {
+    protected void startManagedServer(final PrintJid out, final RP rp) throws Exception {
         configPrefix = serverName() + ".";
-        (new SubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
         (new GetLocalServer("config")).send(this, agentChannelManager(), new RP<JLPCActor>() {
             @Override
             public void processResponse(JLPCActor response) throws Exception {
                 configServer = (ConfigServer) response;
-                (new SubscribeConfig(ClusterManager.this)).sendEvent(ClusterManager.this, configServer);
-                ClusterManager.super.startServer(out, rp);
+                (new SubscribeConfig(ClusterManager.this)).
+                        sendEvent(ClusterManager.this, configServer);
+                (new SubscribeServerNameNotifications(ClusterManager.this)).
+                        sendEvent(ClusterManager.this, agentChannelManager());
+                ClusterManager.super.startManagedServer(out, rp);
             }
         });
     }

@@ -62,9 +62,13 @@ public class ManagedServer extends Server implements QuorumListener {
             public void processResponse(JLPCActor response) throws Exception {
                 quorumServer = (QuorumServer) response;
                 (new SubscribeQuorum(ManagedServer.this)).sendEvent(ManagedServer.this, quorumServer);
-                ManagedServer.super.startServer(out, rp);
+                startManagedServer(out, rp);
             }
         });
+    }
+
+    protected void startManagedServer(PrintJid out, RP rp) throws Exception {
+        super.startServer(out, rp);
     }
 
     @Override
