@@ -51,7 +51,8 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     private ClusterManager clusterManager;
     private TreeSet<String> kingmakers = new TreeSet<String>();
     private TreeSet<String> clusterManagers = new TreeSet<String>();
-    private boolean starting;
+    private boolean startingClusterManager;
+    private boolean initialized;
 
     @Override
     protected String serverName() {
@@ -60,14 +61,34 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
-        (new SubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
-        (new GetLocalServer("quorum")).send(this, agentChannelManager(), new RP<JLPCActor>() {
-            @Override
-            public void processResponse(JLPCActor response) throws Exception {
-                (new SubscribeQuorum(KingmakerServer.this)).sendEvent(KingmakerServer.this, response);
-                KingmakerServer.super.startServer(out, rp);
-            }
-        });
+        (new SubscribeServerNameNotifications(this)).
+                send(this, agentChannelManager(), new RP<Boolean>() {
+                    @Override
+                    public void processResponse(Boolean subscribedToServerNameNotifications) throws Exception {
+                        (new GetLocalServer("quorum")).
+                                send(KingmakerServer.this, agentChannelManager(), new RP<JLPCActor>() {
+                                    @Override
+                                    public void processResponse(JLPCActor quorumServer) throws Exception {
+                                        (new SubscribeQuorum(KingmakerServer.this)).
+                                                send(KingmakerServer.this, quorumServer, new RP<Boolean>() {
+                                                    @Override
+                                                    public void processResponse(Boolean subscribedToQuorumNotifications)
+                                                            throws Exception {
+                                                        KingmakerServer.super.startServer(out, new RP() {
+                                                            @Override
+                                                            public void processResponse(Object response)
+                                                                    throws Exception {
+                                                                initialized = true;
+                                                                perform();
+                                                                rp.processResponse(response);
+                                                            }
+                                                        });
+                                                    }
+                                                });
+                                    }
+                                });
+                    }
+                });
     }
 
     @Override
@@ -99,6 +120,8 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     }
 
     private void perform() throws Exception {
+        if (!initialized)
+            return;
         if (!quorum) {
             if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
                 clusterManager.close();
@@ -121,10 +144,10 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     }
 
     private void startClusterManager() throws Exception {
-        if (starting) {
+        if (startingClusterManager) {
             return;
         }
-        starting = true;
+        startingClusterManager = true;
         String args = startupArgs();
         int i = args.indexOf(' ');
         String serverClassName = args;
@@ -150,7 +173,8 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
                 sb.append(serverClass.getName() + ":\n");
                 out.appendto(sb);
                 logger.info(sb.toString().trim());
-                starting = false;
+                startingClusterManager = false;
+                perform();
             }
         });
     }
