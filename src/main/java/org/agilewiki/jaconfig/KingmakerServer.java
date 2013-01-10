@@ -27,12 +27,14 @@ import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.quorum.QuorumListener;
 import org.agilewiki.jaconfig.quorum.QuorumServer;
 import org.agilewiki.jaconfig.quorum.SubscribeQuorum;
+import org.agilewiki.jaconfig.quorum.UnsubscribeQuorum;
 import org.agilewiki.jaconfig.rank.simple.SimpleRanker;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
+import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -53,6 +55,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     private TreeSet<String> clusterManagers = new TreeSet<String>();
     private boolean startingClusterManager;
     private boolean initialized;
+    private QuorumServer quorumServer;
 
     @Override
     protected String serverName() {
@@ -69,6 +72,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
                                 send(KingmakerServer.this, agentChannelManager(), new RP<JLPCActor>() {
                                     @Override
                                     public void processResponse(JLPCActor quorumServer) throws Exception {
+                                        KingmakerServer.this.quorumServer = (QuorumServer) quorumServer;
                                         (new SubscribeQuorum(KingmakerServer.this)).
                                                 send(KingmakerServer.this, quorumServer, new RP<Boolean>() {
                                                     @Override
@@ -89,6 +93,21 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
                                 });
                     }
                 });
+    }
+
+    @Override
+    public void close() {
+        UnsubscribeServerNameNotifications unsubscribeServerNameNotifications =
+                new UnsubscribeServerNameNotifications(this);
+        UnsubscribeQuorum unsubscribeQuorum =
+                new UnsubscribeQuorum(this);
+        try {
+            unsubscribeServerNameNotifications.sendEvent(agentChannelManager());
+            unsubscribeQuorum.sendEvent(quorumServer);
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        super.close();
     }
 
     @Override

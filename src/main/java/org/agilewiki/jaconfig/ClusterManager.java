@@ -24,15 +24,17 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.TreeSet;
 
 public class ClusterManager extends ManagedServer implements ServerNameListener, ConfigListener {
     public static Logger logger = LoggerFactory.getLogger(ClusterManager.class);
 
     private ConfigServer configServer;
     private String configPrefix;
-    private HashMap<String, HashSet<String>> serverAddresses = new HashMap<String, HashSet<String>>();
+    private HashMap<String, TreeSet<String>> serverAddresses = new HashMap<String, TreeSet<String>>();
     private HashMap<String, String> serverConfigs = new HashMap<String, String>();
     private HashSet<String> restart = new HashSet<String>();
+    private boolean initialized;
 
     @Override
     protected void startManagedServer(final PrintJid out, final RP rp) throws Exception {
@@ -42,10 +44,25 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             public void processResponse(JLPCActor response) throws Exception {
                 configServer = (ConfigServer) response;
                 (new SubscribeConfig(ClusterManager.this)).
-                        sendEvent(ClusterManager.this, configServer);
-                (new SubscribeServerNameNotifications(ClusterManager.this)).
-                        sendEvent(ClusterManager.this, agentChannelManager());
-                ClusterManager.super.startManagedServer(out, rp);
+                        send(ClusterManager.this, configServer, new RP<Boolean>() {
+                            @Override
+                            public void processResponse(Boolean subscribedConfig) throws Exception {
+                                (new SubscribeServerNameNotifications(ClusterManager.this)).
+                                        send(ClusterManager.this, agentChannelManager(), new RP<Boolean>() {
+                                            @Override
+                                            public void processResponse(Boolean response) throws Exception {
+                                                ClusterManager.super.startManagedServer(out, new RP() {
+                                                    @Override
+                                                    public void processResponse(Object response) throws Exception {
+                                                        initialized = true;
+                                                        perform();
+                                                        rp.processResponse(response);
+                                                    }
+                                                });
+                                            }
+                                        });
+                            }
+                        });
             }
         });
     }
@@ -60,6 +77,35 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         super.close();
     }
 
+    private void perform() throws Exception {
+        Iterator<String> vit = serverConfigs.keySet().iterator();
+        while (vit.hasNext()) {
+            String name = vit.next();
+            String value = serverConfigs.get(name);
+            if (value.length() == 0 ||
+                    !name.startsWith(configPrefix) ||
+                    name.length() <= configPrefix.length() ||
+                    serverAddresses.containsKey(name))
+                continue;
+            startup(name);
+        }
+        Iterator<String> ait = serverAddresses.keySet().iterator();
+        while (ait.hasNext()) {
+            String name = ait.next();
+            TreeSet<String> saddresses = serverAddresses.get(name);
+            String value = serverConfigs.get(name);
+            int maxSize = 1;
+            if (value == null || value.length() == 0)
+                maxSize = 0;
+            while (saddresses.size() > maxSize) {
+                String address = saddresses.last();
+                shutdown(name, address);
+            }
+            if (maxSize == 0)
+                serverAddresses.remove(name);
+        }
+    }
+
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
         if (!name.startsWith(configPrefix))
@@ -68,12 +114,14 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             logger.error("invalid server name (missing server name postfix): " + name);
             return;
         }
-        HashSet<String> saddresses = serverAddresses.get(name);
+        TreeSet<String> saddresses = serverAddresses.get(name);
         if (saddresses == null) {
-            saddresses = new HashSet<String>();
+            saddresses = new TreeSet<String>();
             serverAddresses.put(name, saddresses);
         }
         saddresses.add(address);
+        if (!initialized)
+            return;
         if (!serverConfigs.containsKey(name) || saddresses.size() > 1) {
             logger.warn("shutdown duplicate " + name + address);
             shutdown(name, address);
@@ -88,12 +136,14 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             logger.error("invalid server name (missing server name postfix): " + name);
             return;
         }
-        HashSet<String> saddresses = serverAddresses.get(name);
+        TreeSet<String> saddresses = serverAddresses.get(name);
         if (saddresses == null)
             return;
         saddresses.remove(address);
         if (saddresses.isEmpty()) {
             serverAddresses.remove(name);
+            if (!initialized)
+                return;
             if (serverConfigs.containsKey(name))
                 if (restart.contains(name))
                     startup(name);
@@ -125,12 +175,14 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         } else {
             serverConfigs.put(name, value);
         }
+        if (!initialized)
+            return;
         if (!serverAddresses.containsKey(name)) {
             if (value.length() > 0)
                 startup(name);
             return;
         }
-        HashSet<String> saddresses = serverAddresses.get(name);
+        TreeSet<String> saddresses = serverAddresses.get(name);
         Iterator<String> it = saddresses.iterator();
         while (it.hasNext()) {
             String address = it.next();
@@ -140,7 +192,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         }
     }
 
-    private void startup(final String name) throws Exception {
+    private void startup(String name) throws Exception {
         String args = serverConfigs.get(name);
         String serverClass = args;
         String serverArgs = "";
