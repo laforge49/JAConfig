@@ -147,8 +147,6 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
             }
             return;
         }
-        if (!quorum)
-            return;
         if (clusterManagers.size() == 1)
             return;
         if (clusterManagers.isEmpty()) {
