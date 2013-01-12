@@ -126,7 +126,7 @@ public class ConfigServer extends Server implements ServerNameListener {
         map = (StringBMapJid<TimeValueJid>) rootJid.getValue();
         registerServerCommand(new ServerCommand("values", "list all names and their assigned values") {
             @Override
-            public void eval(String args, PrintJid out, RP<PrintJid> rp) throws Exception {
+            public void eval(String operatorName, String args, PrintJid out, RP<PrintJid> rp) throws Exception {
                 int s = map.size();
                 int i = 0;
                 while (i < s) {
@@ -143,7 +143,7 @@ public class ConfigServer extends Server implements ServerNameListener {
         });
         registerServerCommand(new ServerCommand("assign", "set a name to a value") {
             @Override
-            public void eval(String args, PrintJid out, RP<PrintJid> rp) throws Exception {
+            public void eval(String operatorName, String args, PrintJid out, RP<PrintJid> rp) throws Exception {
                 if (args.length() == 0) {
                     out.println("missing name");
                 } else {
