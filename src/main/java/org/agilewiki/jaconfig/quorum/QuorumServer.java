@@ -286,7 +286,8 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
                 }
                 StartupAgent startupAgent = (StartupAgent) node().factory().newActor(
                         StartupAgentFactory.fac.actorType, getMailbox());
-                startupAgent.setArgString(
+                startupAgent.configure(
+                        "*quorumServer*",
                         startupEntry.className + " " + startupEntry.serverName + " " + startupEntry.serverArgs);
                 (new ShipAgent(startupAgent)).send(QuorumServer.this, response, new RP<Jid>() {
                     @Override

@@ -215,7 +215,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                     if (response != null) {
                         ServerEvalAgent serverEvalAgent = (ServerEvalAgent) node().factory().newActor(
                                 ServerEvalAgentFactory.fac.actorType, getMailbox());
-                        serverEvalAgent.setArgString("shutdown");
+                        serverEvalAgent.configure("*clusterManager*", "shutdown");
                         (new ShipAgent(serverEvalAgent)).send(ClusterManager.this, response, new RP<Jid>() {
                             @Override
                             public void processResponse(Jid response) throws Exception {
