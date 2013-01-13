@@ -38,7 +38,7 @@ public class ManagedServer extends Server implements QuorumListener {
     protected boolean quorum = true;
 
     @Override
-    protected String startupArgs() {
+    public String startupArgs() {
         int i = super.startupArgs().indexOf(" ");
         if (i > -1) {
             return super.startupArgs().substring(i + 1);

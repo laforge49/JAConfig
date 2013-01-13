@@ -182,7 +182,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         final PrintJid out = (PrintJid) node().factory().newActor(
                 JASocketFactories.PRINT_JID_FACTORY,
                 node().mailboxFactory().createMailbox());
-        Startup startup = new Startup(node, args, out);
+        Startup startup = new Startup(node, "*kingmaker*", args, out);
         startup.send(this, clusterManager, new RP<PrintJid>() {
             @Override
             public void processResponse(PrintJid response) throws Exception {
