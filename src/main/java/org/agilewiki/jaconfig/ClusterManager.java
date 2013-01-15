@@ -6,7 +6,6 @@ import org.agilewiki.jaconfig.db.UnsubscribeConfig;
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.quorum.StartupServer;
 import org.agilewiki.jactor.RP;
-import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.agentChannel.ShipAgent;
 import org.agilewiki.jasocket.cluster.GetAgentChannel;
@@ -16,6 +15,7 @@ import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
 import org.agilewiki.jasocket.commands.ServerEvalAgent;
 import org.agilewiki.jasocket.commands.ServerEvalAgentFactory;
 import org.agilewiki.jasocket.jid.PrintJid;
+import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.serverNameListener.ServerNameListener;
 import org.agilewiki.jid.Jid;
 import org.slf4j.Logger;
@@ -39,9 +39,9 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     @Override
     protected void startManagedServer(final PrintJid out, final RP rp) throws Exception {
         configPrefix = serverName() + ".";
-        (new GetLocalServer("config")).send(this, agentChannelManager(), new RP<JLPCActor>() {
+        (new GetLocalServer("config")).send(this, agentChannelManager(), new RP<Server>() {
             @Override
-            public void processResponse(JLPCActor response) throws Exception {
+            public void processResponse(Server response) throws Exception {
                 configServer = (ConfigServer) response;
                 (new SubscribeConfig(ClusterManager.this)).
                         send(ClusterManager.this, configServer, new RP<Boolean>() {
@@ -233,9 +233,9 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     private void localShutdown(String name) throws Exception {
-        (new GetLocalServer(name)).send(this, agentChannelManager(), new RP<JLPCActor>() {
+        (new GetLocalServer(name)).send(this, agentChannelManager(), new RP<Server>() {
             @Override
-            public void processResponse(JLPCActor response) throws Exception {
+            public void processResponse(Server response) throws Exception {
                 if (response != null)
                     ((ManagedServer) response).close();
             }

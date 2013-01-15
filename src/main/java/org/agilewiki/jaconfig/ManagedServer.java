@@ -28,7 +28,6 @@ import org.agilewiki.jaconfig.quorum.QuorumServer;
 import org.agilewiki.jaconfig.quorum.SubscribeQuorum;
 import org.agilewiki.jaconfig.quorum.UnsubscribeQuorum;
 import org.agilewiki.jactor.RP;
-import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.server.Server;
@@ -57,9 +56,9 @@ public class ManagedServer extends Server implements QuorumListener {
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
-        (new GetLocalServer("quorum")).send(this, agentChannelManager(), new RP<JLPCActor>() {
+        (new GetLocalServer("quorum")).send(this, agentChannelManager(), new RP<Server>() {
             @Override
-            public void processResponse(JLPCActor response) throws Exception {
+            public void processResponse(Server response) throws Exception {
                 quorumServer = (QuorumServer) response;
                 (new SubscribeQuorum(ManagedServer.this)).sendEvent(ManagedServer.this, quorumServer);
                 startManagedServer(out, rp);

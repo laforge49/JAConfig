@@ -30,7 +30,6 @@ import org.agilewiki.jaconfig.quorum.SubscribeQuorum;
 import org.agilewiki.jaconfig.quorum.UnsubscribeQuorum;
 import org.agilewiki.jaconfig.rank.simple.SimpleRanker;
 import org.agilewiki.jactor.RP;
-import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
@@ -69,9 +68,9 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
                     @Override
                     public void processResponse(Boolean subscribedToServerNameNotifications) throws Exception {
                         (new GetLocalServer("quorum")).
-                                send(KingmakerServer.this, agentChannelManager(), new RP<JLPCActor>() {
+                                send(KingmakerServer.this, agentChannelManager(), new RP<Server>() {
                                     @Override
-                                    public void processResponse(JLPCActor quorumServer) throws Exception {
+                                    public void processResponse(Server quorumServer) throws Exception {
                                         KingmakerServer.this.quorumServer = (QuorumServer) quorumServer;
                                         (new SubscribeQuorum(KingmakerServer.this)).
                                                 send(KingmakerServer.this, quorumServer, new RP<Boolean>() {

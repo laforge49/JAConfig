@@ -33,7 +33,6 @@ import org.agilewiki.jaconfig.rank.Ranking;
 import org.agilewiki.jactor.ExceptionHandler;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
-import org.agilewiki.jactor.lpc.JLPCActor;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.agentChannel.ShipAgent;
@@ -87,9 +86,9 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         ps.add(myp);
         hosts.put(myipa, ps);
         (new SubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
-        (new GetLocalServer("config")).send(this, agentChannelManager(), new RP<JLPCActor>() {
+        (new GetLocalServer("config")).send(this, agentChannelManager(), new RP<Server>() {
             @Override
-            public void processResponse(JLPCActor response) throws Exception {
+            public void processResponse(Server response) throws Exception {
                 configServer = (ConfigServer) response;
                 (new SubscribeConfig(QuorumServer.this)).sendEvent(QuorumServer.this, configServer);
                 QuorumServer.super.startServer(out, rp);
@@ -210,9 +209,9 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
             }
         });
         final String rankerName = startupEntry.rankerName;
-        (new GetLocalServer(rankerName)).send(this, agentChannelManager(), new RP<JLPCActor>() {
+        (new GetLocalServer(rankerName)).send(this, agentChannelManager(), new RP<Server>() {
             @Override
-            public void processResponse(JLPCActor response) throws Exception {
+            public void processResponse(Server response) throws Exception {
                 if (!quorum)
                     return;
                 if (response == null) {
