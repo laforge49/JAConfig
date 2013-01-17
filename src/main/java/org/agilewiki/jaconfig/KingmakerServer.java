@@ -34,6 +34,7 @@ import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
+import org.agilewiki.jasocket.console.SunInterrupter;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -203,7 +204,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
             node.startup(SimpleRanker.class, "");
             node.startup(QuorumServer.class, "kingmaker");
             node.startup(KingmakerServer.class, ClusterManager.class.getName());
-            (new ConsoleApp()).create(node);
+            (new ConsoleApp()).create(node, new SunInterrupter());
         } catch (Exception ex) {
             node.mailboxFactory().close();
             throw ex;

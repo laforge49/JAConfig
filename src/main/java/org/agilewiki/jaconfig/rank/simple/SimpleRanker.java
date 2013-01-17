@@ -4,6 +4,7 @@ import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.rank.RankerServer;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jasocket.cluster.ServerNames;
+import org.agilewiki.jasocket.console.SunInterrupter;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
 
@@ -63,7 +64,7 @@ public class SimpleRanker extends RankerServer {
             node.process();
             node.startup(ConfigServer.class, "");
             node.startup(SimpleRanker.class, "");
-            (new ConsoleApp()).create(node);
+            (new ConsoleApp()).create(node, new SunInterrupter());
         } catch (Exception ex) {
             node.mailboxFactory().close();
             throw ex;

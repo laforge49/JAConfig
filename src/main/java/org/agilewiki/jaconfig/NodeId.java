@@ -23,6 +23,7 @@
  */
 package org.agilewiki.jaconfig;
 
+import org.agilewiki.jasocket.console.SunInterrupter;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
@@ -42,7 +43,7 @@ public class NodeId extends Server {
         try {
             node.process();
             node.startup(NodeId.class, "");
-            (new ConsoleApp()).create(node);
+            (new ConsoleApp()).create(node, new SunInterrupter());
         } catch (Exception ex) {
             node.mailboxFactory().close();
             throw ex;

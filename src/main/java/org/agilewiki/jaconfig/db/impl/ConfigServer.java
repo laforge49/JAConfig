@@ -32,6 +32,7 @@ import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.agentChannel.ShipAgent;
 import org.agilewiki.jasocket.cluster.ShipAgentEventToAll;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
+import org.agilewiki.jasocket.console.SunInterrupter;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -246,7 +247,7 @@ public class ConfigServer extends Server implements ServerNameListener {
         try {
             node.process();
             node.startup(ConfigServer.class, "");
-            (new ConsoleApp()).create(node);
+            (new ConsoleApp()).create(node, new SunInterrupter());
         } catch (Exception ex) {
             node.mailboxFactory().close();
             throw ex;

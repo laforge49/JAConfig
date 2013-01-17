@@ -42,6 +42,7 @@ import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
 import org.agilewiki.jasocket.commands.StartupAgent;
 import org.agilewiki.jasocket.commands.StartupAgentFactory;
+import org.agilewiki.jasocket.console.SunInterrupter;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.node.ConsoleApp;
 import org.agilewiki.jasocket.node.Node;
@@ -316,7 +317,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
             node.process();
             node.startup(ConfigServer.class, "");
             node.startup(QuorumServer.class, "quorum");
-            (new ConsoleApp()).create(node);
+            (new ConsoleApp()).create(node, new SunInterrupter());
         } catch (Exception ex) {
             node.mailboxFactory().close();
             throw ex;
