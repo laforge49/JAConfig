@@ -23,6 +23,7 @@
  */
 package org.agilewiki.jaconfig.db.impl;
 
+import org.agilewiki.jaconfig.JACNode;
 import org.agilewiki.jaconfig.db.Assigned;
 import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jactor.RP;
@@ -47,6 +48,8 @@ import org.agilewiki.jid.collection.vlenc.map.MapEntry;
 import org.agilewiki.jid.collection.vlenc.map.StringBMapJid;
 import org.agilewiki.jid.collection.vlenc.map.StringBMapJidFactory;
 import org.agilewiki.jid.scalar.vlens.actor.RootJid;
+import org.apache.sshd.server.PasswordAuthenticator;
+import org.apache.sshd.server.session.ServerSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +59,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.HashSet;
 import java.util.Iterator;
 
-public class ConfigServer extends Server implements ServerNameListener {
+public class ConfigServer extends Server implements ServerNameListener, PasswordAuthenticator {
     public static final String NAME_TIME_VALUE_TYPE = "nameTimeValue";
     public static final StringBMapJidFactory nameTimeValueMapFactory = new StringBMapJidFactory(
             NAME_TIME_VALUE_TYPE, TimeValueJidFactory.fac);
@@ -164,6 +167,7 @@ public class ConfigServer extends Server implements ServerNameListener {
             }
         });
         (new SubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
+        ((JACNode) node()).configServer = this;
         super.startServer(out, rp);
     }
 
@@ -242,7 +246,7 @@ public class ConfigServer extends Server implements ServerNameListener {
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
+        Node node = new JACNode(args, 100);
         try {
             node.process();
             node.startup(ConfigServer.class, "");
@@ -251,5 +255,10 @@ public class ConfigServer extends Server implements ServerNameListener {
             node.mailboxFactory().close();
             throw ex;
         }
+    }
+
+    @Override
+    public boolean authenticate(String username, String password, ServerSession session) {
+        return !username.contains(" ");
     }
 }

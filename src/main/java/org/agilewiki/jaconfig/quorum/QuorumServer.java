@@ -23,6 +23,7 @@
  */
 package org.agilewiki.jaconfig.quorum;
 
+import org.agilewiki.jaconfig.JACNode;
 import org.agilewiki.jaconfig.ManagedServer;
 import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jaconfig.db.SubscribeConfig;
@@ -311,7 +312,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
+        Node node = new JACNode(args, 100);
         try {
             node.process();
             node.startup(ConfigServer.class, "");

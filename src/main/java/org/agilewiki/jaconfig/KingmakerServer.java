@@ -196,7 +196,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     }
 
     public static void main(String[] args) throws Exception {
-        Node node = new Node(args, 100);
+        Node node = new JACNode(args, 100);
         try {
             node.process();
             node.startup(ConfigServer.class, "");

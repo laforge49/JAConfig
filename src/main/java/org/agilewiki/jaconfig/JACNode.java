@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 Bill La Forge
+ * Copyright 2013 Bill La Forge
  *
  * This file is part of AgileWiki and is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -24,30 +24,17 @@
 package org.agilewiki.jaconfig;
 
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
-import org.agilewiki.jasocket.node.IntCon;
 import org.agilewiki.jasocket.node.Node;
-import org.agilewiki.jasocket.server.Server;
+import org.apache.sshd.server.PasswordAuthenticator;
 
-public class NodeId extends Server {
-    @Override
-    protected String serverName() {
-        String[] args = node().args();
-        if (args.length > 1) {
-            return "node." + args[1];
-        } else
-            return "node.default";
+public class JACNode extends Node {
+    public ConfigServer configServer;
+
+    public JACNode(String[] args, int threadCount) throws Exception {
+        super(args, threadCount);
     }
 
-    public static void main(String[] args) throws Exception {
-        Node node = new JACNode(args, 100);
-        try {
-            node.process();
-            node.startup(ConfigServer.class, "");
-            node.startup(NodeId.class, "");
-            (new IntCon()).create(node);
-        } catch (Exception ex) {
-            node.mailboxFactory().close();
-            throw ex;
-        }
+    public PasswordAuthenticator passwordAuthenticator() {
+        return configServer;
     }
 }
