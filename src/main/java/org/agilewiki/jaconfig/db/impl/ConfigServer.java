@@ -129,7 +129,13 @@ public class ConfigServer extends Server implements ServerNameListener, Password
         map = (StringBMapJid<TimeValueJid>) rootJid.getValue();
         registerServerCommand(new ServerCommand("values", "list all names and their assigned values") {
             @Override
-            public void eval(String operatorName, String args, PrintJid out, long requestId, RP<PrintJid> rp) throws Exception {
+            public void eval(String operatorName,
+                             String id,
+                             AgentChannel agentChannel,
+                             String args,
+                             PrintJid out,
+                             long requestId,
+                             RP<PrintJid> rp) throws Exception {
                 int s = map.size();
                 int i = 0;
                 while (i < s) {
@@ -138,7 +144,10 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                     TimeValueJid tv = me.getValue();
                     String value = tv.getValue();
                     if (value.length() > 0)
-                        out.println(name + " = " + value);
+                        if (name.endsWith(".password"))
+                            out.println(name + " = **********");
+                        else
+                            out.println(name + " = " + value);
                     i += 1;
                 }
                 rp.processResponse(out);
@@ -146,7 +155,13 @@ public class ConfigServer extends Server implements ServerNameListener, Password
         });
         registerServerCommand(new ServerCommand("assign", "set a name to a value") {
             @Override
-            public void eval(String operatorName, String args, PrintJid out, long requestId, RP<PrintJid> rp) throws Exception {
+            public void eval(String operatorName,
+                             String id,
+                             AgentChannel agentChannel,
+                             String args,
+                             PrintJid out,
+                             long requestId,
+                             RP<PrintJid> rp) throws Exception {
                 if (args.length() == 0) {
                     out.println("missing name");
                 } else {
@@ -202,6 +217,8 @@ public class ConfigServer extends Server implements ServerNameListener, Password
 
     public String get(String name) throws Exception {
         TimeValueJid tv = map.kGet(name);
+        if (tv == null)
+            return "";
         return tv.getValue();
     }
 
@@ -259,6 +276,15 @@ public class ConfigServer extends Server implements ServerNameListener, Password
 
     @Override
     public boolean authenticate(String username, String password, ServerSession session) {
-        return !username.contains(" ");
+        try {
+            if (!username.contains(" "))
+                return false;
+            String stored = get(username + ".password");
+            if (stored.length() == 0)
+                return username.equals("admin") && password.equals("admin");
+            return stored.equals(password);
+        } catch (Exception ex) {
+            return false;
+        }
     }
 }

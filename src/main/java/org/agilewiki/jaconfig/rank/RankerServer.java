@@ -24,6 +24,7 @@
 package org.agilewiki.jaconfig.rank;
 
 import org.agilewiki.jactor.RP;
+import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.server.ServerCommand;
@@ -42,7 +43,13 @@ abstract public class RankerServer extends Server {
     protected void startServer(PrintJid out, RP rp) throws Exception {
         registerServerCommand(new ServerCommand("nodes", "list nodes, least busy first") {
             @Override
-            public void eval(String operatorName, String args, final PrintJid out, long requestId, final RP<PrintJid> rp) throws Exception {
+            public void eval(String operatorName,
+                             String id,
+                             AgentChannel agentChannel,
+                             String args,
+                             final PrintJid out,
+                             long requestId,
+                             final RP<PrintJid> rp) throws Exception {
                 ranking(args, new RP<List<String>>() {
                     @Override
                     public void processResponse(List<String> response) throws Exception {
