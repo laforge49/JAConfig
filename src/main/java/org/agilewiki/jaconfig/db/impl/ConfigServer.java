@@ -58,8 +58,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.math.BigInteger;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
 import java.util.HashSet;
 import java.util.Iterator;
 
@@ -537,11 +539,14 @@ public class ConfigServer extends Server implements ServerNameListener, Password
         return "operator." + operatorName + ".password";
     }
 
-    private String newHash(String password, long seed) {
-        return password;
+    private String newHash(String password, long seed) throws Exception {
+        String pw = password + seed;
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        md.update(pw.getBytes(), 0, pw.length());
+        return new BigInteger(1, md.digest()).toString(16);
     }
 
-    private boolean validatePassword(String password, long seed, String hash) {
+    private boolean validatePassword(String password, long seed, String hash) throws Exception {
         return newHash(password, seed).equals(hash);
     }
 
