@@ -197,6 +197,28 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                 changePassword(operatorName, id, agentChannel, out, rp);
             }
         });
+        registerServerCommand(new ServerCommand("setPassword", "sets the password for an existing or new operator") {
+            @Override
+            public void eval(String operatorName,
+                             String id,
+                             AgentChannel agentChannel,
+                             String args,
+                             PrintJid out,
+                             long requestId,
+                             RP<PrintJid> rp) throws Exception {
+                if (args.length() == 0) {
+                    out.println("missing  operator name");
+                    rp.processResponse(out);
+                    return;
+                }
+                String name = args;
+                int i = args.indexOf(" ");
+                if (i > -1) {
+                    name = args.substring(0, i);
+                }
+                setPassword(name, operatorName, id, agentChannel, out, rp);
+            }
+        });
         registerServerCommand(new ServerCommand("clearPassword", "Prevent an operator from logging in") {
             @Override
             public void eval(String operatorName,
@@ -266,7 +288,7 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                     return;
                 }
                 if (!authenticate(operatorName, oldPassword)) {
-                    logger.warn("invalid password for changePassword: " + operatorName);
+                    logger.warn("invalid password for changePassword by " + operatorName);
                     out.println("Invalid password");
                     rp.processResponse(out);
                     return;
@@ -315,7 +337,86 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                                 (new ShipAgentEventToAll(assignAgent)).sendEvent(
                                         ConfigServer.this,
                                         agentChannelManager());
-                                logger.info("password changed: " + operatorName);
+                                logger.info("password changed by " + operatorName);
+                                Iterator<ConfigListener> it = listeners.iterator();
+                                Assigned a = new Assigned(name, value);
+                                while (it.hasNext()) {
+                                    a.sendEvent(ConfigServer.this, it.next());
+                                }
+                                out.println("OK");
+                                rp.processResponse(out);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    public void setPassword(final String opName,
+                              final String operatorName,
+                              final String id,
+                              final AgentChannel agentChannel,
+                              final PrintJid out,
+                              final RP<PrintJid> rp) throws Exception {
+        consoleReadPassword(id, agentChannel, "admin password>", new RP<String>() {
+            @Override
+            public void processResponse(String adminPassword) throws Exception {
+                if (adminPassword == null) {
+                    rp.processResponse(out);
+                    return;
+                }
+                if (!authenticate("admin", adminPassword)) {
+                    logger.warn("invalid admin password of setPassword on " + opName + " by " + operatorName);
+                    out.println("Invalid password");
+                    rp.processResponse(out);
+                    return;
+                }
+                consoleReadPassword(id, agentChannel, "password>", new RP<String>() {
+                    @Override
+                    public void processResponse(final String password) throws Exception {
+                        if (password == null) {
+                            rp.processResponse(out);
+                            return;
+                        }
+                        consoleReadPassword(id, agentChannel, "confirm>", new RP<String>() {
+                            @Override
+                            public void processResponse(String confirm) throws Exception {
+                                if (confirm == null) {
+                                    rp.processResponse(out);
+                                    return;
+                                }
+                                if (!password.equals(confirm)) {
+                                    out.println("password unconfirmed");
+                                    rp.processResponse(out);
+                                    return;
+                                }
+                                String name = passwordName(opName);
+                                long timestamp = System.currentTimeMillis();
+                                String value = newHash(password, timestamp);
+                                map.kMake(name);
+                                TimeValueJid tv = map.kGet(name);
+                                long oldTimestamp = tv.getTimestamp();
+                                String oldValue = tv.getValue();
+                                if (timestamp < oldTimestamp)
+                                    throw new ClockingException();
+                                if (timestamp == oldTimestamp && value.compareTo(oldValue) <= 0)
+                                    throw new ClockingException();
+                                tv.setTimestamp(timestamp);
+                                tv.setValue(value);
+                                block.setCurrentPosition(0L);
+                                block.setRootJid(rootJid);
+                                jFile.writeRootJid(block, maxSize());
+                                AssignAgent assignAgent = (AssignAgent) JAFactory.newActor(
+                                        ConfigServer.this,
+                                        AssignAgentFactory.ASSIGN_AGENT,
+                                        getMailbox(),
+                                        ConfigServer.this);
+                                assignAgent.set(serverName(), name, timestamp, value);
+                                (new ShipAgentEventToAll(assignAgent)).sendEvent(
+                                        ConfigServer.this,
+                                        agentChannelManager());
+                                logger.info("password set on " + operatorName + " by " + operatorName);
                                 Iterator<ConfigListener> it = listeners.iterator();
                                 Assigned a = new Assigned(name, value);
                                 while (it.hasNext()) {
@@ -345,7 +446,7 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                     return;
                 }
                 if (!authenticate("admin", adminPassword)) {
-                    logger.warn("invalid admin password for clearPassword of " + opName + " by " + operatorName);
+                    logger.warn("invalid admin password on clearPassword for " + opName + " by " + operatorName);
                     out.println("Invalid password");
                     rp.processResponse(out);
                     return;
@@ -373,7 +474,7 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                 assignAgent.set(serverName(), name, timestamp, "");
                 (new ShipAgentEventToAll(assignAgent)).sendEvent(ConfigServer.this, agentChannelManager());
                 if ("".equals(oldValue))
-                logger.info("password cleared: " + opName);
+                    logger.info("password cleared on " + opName + " by " + operatorName);
                 Iterator<ConfigListener> it = listeners.iterator();
                 Assigned a = new Assigned(name, "");
                 while (it.hasNext()) {
