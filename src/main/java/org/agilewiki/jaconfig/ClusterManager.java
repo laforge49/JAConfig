@@ -201,7 +201,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             serverClass = args.substring(0, i);
             serverArgs = args.substring(i + 1).trim();
         }
-        StartupServer startupServer = new StartupServer(name, serverClass, serverArgs, "ranker");
+        StartupServer startupServer = new StartupServer("*clusterManager*", name, serverClass, serverArgs, "ranker");
         startupServer.sendEvent(this, quorumServer);
     }
 

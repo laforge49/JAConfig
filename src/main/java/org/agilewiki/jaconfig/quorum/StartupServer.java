@@ -33,11 +33,18 @@ public class StartupServer extends Request<Jid, QuorumServer> {
     StartupEntry startupEntry;
 
     public StartupServer(
+            String initiatingServerName,
             String serverName,
             String className,
             String serverArgs,
             String rankerName) {
-        startupEntry = new StartupEntry(serverName, className, serverArgs, rankerName, null);
+        startupEntry = new StartupEntry(
+                initiatingServerName,
+                serverName,
+                className,
+                serverArgs,
+                rankerName,
+                null);
     }
 
     @Override

@@ -27,6 +27,7 @@ import org.agilewiki.jactor.RP;
 import org.agilewiki.jasocket.jid.PrintJid;
 
 public class StartupEntry {
+    public String initiatingServerName;
     public String serverName;
     public String className;
     public String serverArgs;
@@ -34,11 +35,13 @@ public class StartupEntry {
     public RP rp;
 
     public StartupEntry(
+            String initiatingServerName,
             String serverName,
             String className,
             String serverArgs,
             String rankerName,
             RP<PrintJid> rp) {
+        this.initiatingServerName = initiatingServerName;
         this.serverName = serverName;
         this.className = className;
         this.serverArgs = serverArgs;

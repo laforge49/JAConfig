@@ -259,7 +259,11 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         final PrintJid out = (PrintJid) node().factory().newActor(
                 JASocketFactories.PRINT_JID_FACTORY,
                 node().mailboxFactory().createMailbox());
-        Startup startup = new Startup(node, "*quorumServer*", startupEntry.serverName + " " + startupEntry.serverArgs, out);
+        Startup startup = new Startup(
+                node,
+                startupEntry.initiatingServerName,
+                startupEntry.serverName + " " + startupEntry.serverArgs,
+                out);
         startup.send(this, managedServer, new RP<PrintJid>() {
             @Override
             public void processResponse(PrintJid response) throws Exception {
@@ -287,7 +291,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
                 StartupAgent startupAgent = (StartupAgent) node().factory().newActor(
                         StartupAgentFactory.fac.actorType, getMailbox());
                 startupAgent.configure(
-                        "*quorumServer*",
+                        startupEntry.initiatingServerName,
                         null,
                         startupEntry.className + " " + startupEntry.serverName + " " + startupEntry.serverArgs);
                 (new ShipAgent(startupAgent)).send(QuorumServer.this, response, new RP<Jid>() {
