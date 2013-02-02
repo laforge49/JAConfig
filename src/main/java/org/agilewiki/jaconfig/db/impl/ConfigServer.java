@@ -26,8 +26,12 @@ package org.agilewiki.jaconfig.db.impl;
 import org.agilewiki.jaconfig.JACNode;
 import org.agilewiki.jaconfig.db.Assigned;
 import org.agilewiki.jaconfig.db.ConfigListener;
+import org.agilewiki.jactor.Actor;
+import org.agilewiki.jactor.JAFuture;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jactor.factory.JAFactory;
+import org.agilewiki.jactor.lpc.JLPCActor;
+import org.agilewiki.jactor.lpc.Request;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.agentChannel.AgentChannel;
 import org.agilewiki.jasocket.agentChannel.ShipAgent;
@@ -144,7 +148,7 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                     TimeValueJid tv = me.getValue();
                     String value = tv.getValue();
                     if (value.length() > 0)
-                        if (name.endsWith(".password"))
+                        if (name.startsWith("operator.") && name.endsWith(".password"))
                             out.println(name + " = **********");
                         else
                             out.println(name + " = " + value);
@@ -181,6 +185,40 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                 rp.processResponse(out);
             }
         });
+        registerServerCommand(new ServerCommand("changePassword", "changes the operator's password") {
+            @Override
+            public void eval(String operatorName,
+                             String id,
+                             AgentChannel agentChannel,
+                             String args,
+                             final PrintJid out,
+                             long requestId,
+                             final RP<PrintJid> rp) throws Exception {
+                changePassword(operatorName, id, agentChannel, out, rp);
+            }
+        });
+        registerServerCommand(new ServerCommand("clearPassword", "Prevent an operator from logging in") {
+            @Override
+            public void eval(String operatorName,
+                             String id,
+                             AgentChannel agentChannel,
+                             String args,
+                             PrintJid out,
+                             long requestId,
+                             RP<PrintJid> rp) throws Exception {
+                if (args.length() == 0) {
+                    out.println("missing  operator name");
+                    rp.processResponse(out);
+                    return;
+                }
+                String name = args;
+                int i = args.indexOf(" ");
+                if (i > -1) {
+                    name = args.substring(0, i);
+                }
+                clearPassword(name, operatorName, id, agentChannel, out, rp);
+            }
+        });
         (new SubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
         ((JACNode) node()).configServer = this;
         super.startServer(out, rp);
@@ -213,6 +251,138 @@ public class ConfigServer extends Server implements ServerNameListener, Password
             a.sendEvent(this, it.next());
         }
         return true;
+    }
+
+    public void changePassword(final String operatorName,
+                               final String id,
+                               final AgentChannel agentChannel,
+                               final PrintJid out,
+                               final RP<PrintJid> rp) throws Exception {
+        consoleReadPassword(id, agentChannel, "old password>", new RP<String>() {
+            @Override
+            public void processResponse(String oldPassword) throws Exception {
+                if (oldPassword == null) {
+                    rp.processResponse(out);
+                    return;
+                }
+                if (!authenticate(operatorName, oldPassword)) {
+                    logger.warn("invalid password for changePassword: " + operatorName);
+                    out.println("Invalid password");
+                    rp.processResponse(out);
+                    return;
+                }
+                consoleReadPassword(id, agentChannel, "new password>", new RP<String>() {
+                    @Override
+                    public void processResponse(final String newPassword) throws Exception {
+                        if (newPassword == null) {
+                            rp.processResponse(out);
+                            return;
+                        }
+                        consoleReadPassword(id, agentChannel, "confirm>", new RP<String>() {
+                            @Override
+                            public void processResponse(String confirm) throws Exception {
+                                if (confirm == null) {
+                                    rp.processResponse(out);
+                                    return;
+                                }
+                                if (!newPassword.equals(confirm)) {
+                                    out.println("new password unconfirmed");
+                                    rp.processResponse(out);
+                                    return;
+                                }
+                                String name = passwordName(operatorName);
+                                long timestamp = System.currentTimeMillis();
+                                String value = newHash(newPassword, timestamp);
+                                map.kMake(name);
+                                TimeValueJid tv = map.kGet(name);
+                                long oldTimestamp = tv.getTimestamp();
+                                String oldValue = tv.getValue();
+                                if (timestamp < oldTimestamp)
+                                    throw new ClockingException();
+                                if (timestamp == oldTimestamp && value.compareTo(oldValue) <= 0)
+                                    throw new ClockingException();
+                                tv.setTimestamp(timestamp);
+                                tv.setValue(value);
+                                block.setCurrentPosition(0L);
+                                block.setRootJid(rootJid);
+                                jFile.writeRootJid(block, maxSize());
+                                AssignAgent assignAgent = (AssignAgent) JAFactory.newActor(
+                                        ConfigServer.this,
+                                        AssignAgentFactory.ASSIGN_AGENT,
+                                        getMailbox(),
+                                        ConfigServer.this);
+                                assignAgent.set(serverName(), name, timestamp, value);
+                                (new ShipAgentEventToAll(assignAgent)).sendEvent(
+                                        ConfigServer.this,
+                                        agentChannelManager());
+                                logger.info("password changed: " + operatorName);
+                                Iterator<ConfigListener> it = listeners.iterator();
+                                Assigned a = new Assigned(name, value);
+                                while (it.hasNext()) {
+                                    a.sendEvent(ConfigServer.this, it.next());
+                                }
+                                out.println("OK");
+                                rp.processResponse(out);
+                            }
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    public void clearPassword(final String opName,
+                              final String operatorName,
+                              final String id,
+                              final AgentChannel agentChannel,
+                              final PrintJid out,
+                              final RP<PrintJid> rp) throws Exception {
+        consoleReadPassword(id, agentChannel, "admin password>", new RP<String>() {
+            @Override
+            public void processResponse(String adminPassword) throws Exception {
+                if (adminPassword == null) {
+                    rp.processResponse(out);
+                    return;
+                }
+                if (!authenticate("admin", adminPassword)) {
+                    logger.warn("invalid admin password for clearPassword of " + opName + " by " + operatorName);
+                    out.println("Invalid password");
+                    rp.processResponse(out);
+                    return;
+                }
+                String name = passwordName(opName);
+                long timestamp = System.currentTimeMillis();
+                map.kMake(name);
+                TimeValueJid tv = map.kGet(name);
+                long oldTimestamp = tv.getTimestamp();
+                String oldValue = tv.getValue();
+                if (timestamp < oldTimestamp)
+                    throw new ClockingException();
+                if (timestamp == oldTimestamp && "".compareTo(oldValue) <= 0)
+                    throw new ClockingException();
+                tv.setTimestamp(timestamp);
+                tv.setValue("");
+                block.setCurrentPosition(0L);
+                block.setRootJid(rootJid);
+                jFile.writeRootJid(block, maxSize());
+                AssignAgent assignAgent = (AssignAgent) JAFactory.newActor(
+                        ConfigServer.this,
+                        AssignAgentFactory.ASSIGN_AGENT,
+                        getMailbox(),
+                        ConfigServer.this);
+                assignAgent.set(serverName(), name, timestamp, "");
+                (new ShipAgentEventToAll(assignAgent)).sendEvent(ConfigServer.this, agentChannelManager());
+                if ("".equals(oldValue))
+                logger.info("password cleared: " + opName);
+                Iterator<ConfigListener> it = listeners.iterator();
+                Assigned a = new Assigned(name, "");
+                while (it.hasNext()) {
+                    a.sendEvent(ConfigServer.this, it.next());
+                }
+                out.println("OK");
+                rp.processResponse(out);
+            }
+        });
     }
 
     public String get(String name) throws Exception {
@@ -262,6 +432,51 @@ public class ConfigServer extends Server implements ServerNameListener, Password
     public void serverNameRemoved(String address, String name) throws Exception {
     }
 
+    private String passwordName(String operatorName) {
+        return "operator." + operatorName + ".password";
+    }
+
+    private String newHash(String password, long seed) {
+        return password;
+    }
+
+    private boolean validatePassword(String password, long seed, String hash) {
+        return newHash(password, seed).equals(hash);
+    }
+
+    private boolean authenticate(String username, String password) {
+        try {
+            if (username.contains(" "))
+                return false;
+            TimeValueJid tv = map.kGet(passwordName(username));
+            if (tv == null || tv.getValue().length() == 0)
+                return username.equals("admin") && password.equals("admin");
+            String stored = tv.getValue();
+            return validatePassword(password, tv.getTimestamp(), tv.getValue());
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean authenticate(final String username, final String password, ServerSession session) {
+        try {
+            return (new Request<Boolean, ConfigServer>() {
+                @Override
+                public boolean isTargetType(Actor targetActor) {
+                    return targetActor instanceof ConfigServer;
+                }
+
+                @Override
+                public void processRequest(JLPCActor targetActor, RP rp) throws Exception {
+                    rp.processResponse(authenticate(username, password));
+                }
+            }).send(new JAFuture(), this);
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         Node node = new JACNode(args, 100);
         try {
@@ -271,20 +486,6 @@ public class ConfigServer extends Server implements ServerNameListener, Password
         } catch (Exception ex) {
             node.mailboxFactory().close();
             throw ex;
-        }
-    }
-
-    @Override
-    public boolean authenticate(String username, String password, ServerSession session) {
-        try {
-            if (!username.contains(" "))
-                return false;
-            String stored = get(username + ".password");
-            if (stored.length() == 0)
-                return username.equals("admin") && password.equals("admin");
-            return stored.equals(password);
-        } catch (Exception ex) {
-            return false;
         }
     }
 }
