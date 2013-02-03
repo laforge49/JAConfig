@@ -105,6 +105,10 @@ public class ConfigServer extends Server implements ServerNameListener, Password
         return 1000000000;
     }
 
+    private boolean isPasswordName(String name) {
+        return name.startsWith("operator.") && name.endsWith(".password");
+    }
+
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
         (new JFileFactories()).initialize(getParent());
@@ -150,7 +154,7 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                     TimeValueJid tv = me.getValue();
                     String value = tv.getValue();
                     if (value.length() > 0)
-                        if (name.startsWith("operator.") && name.endsWith(".password"))
+                        if (isPasswordName(name))
                             out.println(name + " = **********");
                         else
                             out.println(name + " = " + value);
@@ -178,11 +182,15 @@ public class ConfigServer extends Server implements ServerNameListener, Password
                         name = args.substring(0, i);
                         value = args.substring(i + 1).trim();
                     }
-                    long timestamp = System.currentTimeMillis();
-                    if (assign(name, timestamp, value))
-                        out.println("OK");
-                    else
-                        throw new ClockingException();
+                    if (isPasswordName(name))
+                        out.println("use changePassword or setPassword for password assignment");
+                    else {
+                        long timestamp = System.currentTimeMillis();
+                        if (assign(name, timestamp, value))
+                            out.println("OK");
+                        else
+                            throw new ClockingException();
+                    }
                 }
                 rp.processResponse(out);
             }
@@ -356,11 +364,11 @@ public class ConfigServer extends Server implements ServerNameListener, Password
     }
 
     public void setPassword(final String opName,
-                              final String operatorName,
-                              final String id,
-                              final AgentChannel agentChannel,
-                              final PrintJid out,
-                              final RP<PrintJid> rp) throws Exception {
+                            final String operatorName,
+                            final String id,
+                            final AgentChannel agentChannel,
+                            final PrintJid out,
+                            final RP<PrintJid> rp) throws Exception {
         consoleReadPassword(id, agentChannel, "admin password>", new RP<String>() {
             @Override
             public void processResponse(String adminPassword) throws Exception {
