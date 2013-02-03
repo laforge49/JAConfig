@@ -51,7 +51,8 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     private boolean quorum;
     private ManagedServer clusterManager;
     private ManagedServer hostManager;
-    private TreeSet<String> kingmakers = new TreeSet<String>();
+    private TreeSet<String> clusterKingmakers = new TreeSet<String>();
+    private TreeSet<String> hostKingmakers = new TreeSet<String>();
     private TreeSet<String> clusterManagers = new TreeSet<String>();
     private TreeSet<String> hostManagers = new TreeSet<String>();
     private boolean startingClusterManager;
@@ -131,12 +132,15 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
         if ("kingmaker".equals(name)) {
-            kingmakers.add(address);
+            clusterKingmakers.add(address);
+            if (isLocalHost(address))
+                hostKingmakers.add(address);
             perform();
         } else if ("clusterManager".equals(name)) {
             clusterManagers.add(address);
             perform();
         } else if ("hostManager".equals(name) && isLocalHost(address)) {
+            System.out.println("adding host manager "+address);
             hostManagers.add(address);
             perform();
         }
@@ -145,7 +149,9 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     @Override
     public void serverNameRemoved(String address, String name) throws Exception {
         if ("kingmaker".equals(name)) {
-            kingmakers.remove(address);
+            clusterKingmakers.remove(address);
+            if (isLocalHost(address))
+                hostKingmakers.remove(address);
             perform();
         } else if ("clusterManager".equals(name)) {
             clusterManagers.remove(address);
@@ -158,6 +164,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
 
     @Override
     public void quorum(boolean status) throws Exception {
+        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>quorum="+status);
         quorum = status;
         perform();
     }
@@ -220,30 +227,42 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         if (!quorum) {
             if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
                 clusterManager.close();
-            } else if (hostManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+            }
+            if (hostManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
                 hostManager.close();
             }
             return;
         }
         if (clusterManagers.size() != 1) {
             if (clusterManagers.isEmpty()) {
-                if (kingmakers.isEmpty() || agentChannelManager().isLocalAddress(kingmakers.first())) {
+                System.out.println("need cluster manager "+ clusterKingmakers.isEmpty()+agentChannelManager().isLocalAddress(clusterKingmakers.first()));
+                if (clusterKingmakers.isEmpty() || agentChannelManager().isLocalAddress(clusterKingmakers.first())) {
+                    System.out.println("starting cluster manager here");
                     startClusterManager();
                 }
-            } else if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
-                if (!agentChannelManager().isLocalAddress(clusterManagers.last())) {
-                    clusterManager.close();
+            } else {
+                System.out.println("too many cluster managers");
+                if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+                    System.out.println("cluster manager running here");
+                    if (!agentChannelManager().isLocalAddress(clusterManagers.last())) {
+                        System.out.println("closing largest address");
+                        clusterManager.close();
+                    }
                 }
             }
         }
         if (hostManagers.size() != 1) {
             if (hostManagers.isEmpty()) {
-                if (kingmakers.isEmpty() || agentChannelManager().isLocalAddress(kingmakers.first())) {
+                System.out.println("need host manager "+ hostKingmakers.isEmpty()+agentChannelManager().isLocalAddress(hostKingmakers.first()));
+                if (hostKingmakers.isEmpty() || agentChannelManager().isLocalAddress(hostKingmakers.first())) {
+                    System.out.println("starting host manager here");
                     startHostManager();
                 }
-            } else if (hostManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
-                if (!agentChannelManager().isLocalAddress(hostManagers.last())) {
-                    hostManager.close();
+            } else {
+                if (hostManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+                    if (!agentChannelManager().isLocalAddress(hostManagers.last())) {
+                        hostManager.close();
+                    }
                 }
             }
         }
