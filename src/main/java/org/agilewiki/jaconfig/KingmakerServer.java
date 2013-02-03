@@ -49,12 +49,18 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
     public static Logger logger = LoggerFactory.getLogger(KingmakerServer.class);
 
     private boolean quorum;
-    private ClusterManager clusterManager;
+    private ManagedServer clusterManager;
+    private ManagedServer hostManager;
     private TreeSet<String> kingmakers = new TreeSet<String>();
     private TreeSet<String> clusterManagers = new TreeSet<String>();
+    private TreeSet<String> hostManagers = new TreeSet<String>();
     private boolean startingClusterManager;
+    private boolean startingHostManager;
     private boolean initialized;
     private QuorumServer quorumServer;
+    private String clusterManagerClassName;
+    private String hostManagerClassName;
+    private String localHostPrefix;
 
     @Override
     protected String serverName() {
@@ -63,6 +69,10 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
 
     @Override
     protected void startServer(final PrintJid out, final RP rp) throws Exception {
+        String args = startupArgs();
+        int i = args.indexOf(' ');
+        clusterManagerClassName = args.substring(0, i);
+        hostManagerClassName = args.substring(i + 1).trim();
         (new SubscribeServerNameNotifications(this)).
                 send(this, agentChannelManager(), new RP<Boolean>() {
                     @Override
@@ -109,6 +119,15 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         super.close();
     }
 
+    private boolean isLocalHost(String address) throws Exception {
+        if (localHostPrefix == null) {
+            localHostPrefix = agentChannelManager().agentChannelManagerAddress();
+            int i = localHostPrefix.indexOf(':');
+            localHostPrefix = localHostPrefix.substring(0, i + 1);
+        }
+        return address.startsWith(localHostPrefix);
+    }
+
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
         if ("kingmaker".equals(name)) {
@@ -116,6 +135,9 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
             perform();
         } else if ("clusterManager".equals(name)) {
             clusterManagers.add(address);
+            perform();
+        } else if ("hostManager".equals(name) && isLocalHost(address)) {
+            hostManagers.add(address);
             perform();
         }
     }
@@ -128,6 +150,9 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         } else if ("clusterManager".equals(name)) {
             clusterManagers.remove(address);
             perform();
+        } else if ("hostManager".equals(name) && isLocalHost(address)) {
+            hostManagers.remove(address);
+            perform();
         }
     }
 
@@ -137,51 +162,19 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         perform();
     }
 
-    private void perform() throws Exception {
-        if (!initialized)
-            return;
-        if (!quorum) {
-            if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
-                clusterManager.close();
-            }
-            return;
-        }
-        if (clusterManagers.size() == 1)
-            return;
-        if (clusterManagers.isEmpty()) {
-            if (kingmakers.isEmpty() || agentChannelManager().isLocalAddress(kingmakers.first())) {
-                startClusterManager();
-            }
-        } else if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
-            if (!agentChannelManager().isLocalAddress(clusterManagers.last())) {
-                clusterManager.close();
-            }
-        }
-    }
-
     private void startClusterManager() throws Exception {
         if (startingClusterManager) {
             return;
         }
         startingClusterManager = true;
-        String args = startupArgs();
-        int i = args.indexOf(' ');
-        String serverClassName = args;
-        if (i > -1) {
-            serverClassName = args.substring(0, i);
-            args = args.substring(i + 1).trim();
-        } else {
-            args = "";
-        }
-        args = "clusterManager " + args;
         Node node = agentChannelManager().node;
         ClassLoader classLoader = ClassLoader.getSystemClassLoader();
-        final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(serverClassName);
-        clusterManager = (ClusterManager) node.initializeServer(serverClass);
+        final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(clusterManagerClassName);
+        clusterManager = (ManagedServer) node.initializeServer(serverClass);
         final PrintJid out = (PrintJid) node().factory().newActor(
                 JASocketFactories.PRINT_JID_FACTORY,
                 node().mailboxFactory().createMailbox());
-        Startup startup = new Startup(node, "*kingmaker*", args, out);
+        Startup startup = new Startup(node, "*kingmaker*", "clusterManager", out);
         startup.send(this, clusterManager, new RP<PrintJid>() {
             @Override
             public void processResponse(PrintJid response) throws Exception {
@@ -195,6 +188,67 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         });
     }
 
+    private void startHostManager() throws Exception {
+        if (startingHostManager) {
+            return;
+        }
+        startingHostManager = true;
+        Node node = agentChannelManager().node;
+        ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+        final Class<Server> serverClass = (Class<Server>) classLoader.loadClass(hostManagerClassName);
+        hostManager = (ManagedServer) node.initializeServer(serverClass);
+        final PrintJid out = (PrintJid) node().factory().newActor(
+                JASocketFactories.PRINT_JID_FACTORY,
+                node().mailboxFactory().createMailbox());
+        Startup startup = new Startup(node, "*kingmaker*", "hostManager", out);
+        startup.send(this, hostManager, new RP<PrintJid>() {
+            @Override
+            public void processResponse(PrintJid response) throws Exception {
+                StringBuilder sb = new StringBuilder();
+                sb.append(serverClass.getName() + ":\n");
+                out.appendto(sb);
+                logger.info(sb.toString().trim());
+                startingHostManager = false;
+                perform();
+            }
+        });
+    }
+
+    private void perform() throws Exception {
+        if (!initialized)
+            return;
+        if (!quorum) {
+            if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+                clusterManager.close();
+            } else if (hostManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+                hostManager.close();
+            }
+            return;
+        }
+        if (clusterManagers.size() != 1) {
+            if (clusterManagers.isEmpty()) {
+                if (kingmakers.isEmpty() || agentChannelManager().isLocalAddress(kingmakers.first())) {
+                    startClusterManager();
+                }
+            } else if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+                if (!agentChannelManager().isLocalAddress(clusterManagers.last())) {
+                    clusterManager.close();
+                }
+            }
+        }
+        if (hostManagers.size() != 1) {
+            if (hostManagers.isEmpty()) {
+                if (kingmakers.isEmpty() || agentChannelManager().isLocalAddress(kingmakers.first())) {
+                    startHostManager();
+                }
+            } else if (hostManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
+                if (!agentChannelManager().isLocalAddress(hostManagers.last())) {
+                    hostManager.close();
+                }
+            }
+        }
+    }
+
     public static void main(String[] args) throws Exception {
         Node node = new JACNode(args, 100);
         try {
@@ -202,7 +256,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
             node.startup(ConfigServer.class, "");
             node.startup(SimpleRanker.class, "");
             node.startup(QuorumServer.class, "kingmaker");
-            node.startup(KingmakerServer.class, ClusterManager.class.getName());
+            node.startup(KingmakerServer.class, ClusterManager.class.getName() + " " + HostManager.class.getName());
             (new IntCon()).create(node);
         } catch (Exception ex) {
             node.mailboxFactory().close();
