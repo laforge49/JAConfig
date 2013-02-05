@@ -159,7 +159,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
         if (!serverConfigs.containsKey(name) || saddresses.size() > 1) {
             logger.warn("shutdown duplicate " + name + address);
             restart.add(name);
-            shutdown(name, address);
+            shutdown(name, saddresses.first());
         }
     }
 
