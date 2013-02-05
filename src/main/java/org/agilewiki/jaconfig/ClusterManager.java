@@ -227,7 +227,6 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     private void startup(String name) throws Exception {
-        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@start "+name);
         String args = serverConfigs.get(name);
         String serverClass = args;
         String serverArgs = "";
@@ -244,7 +243,6 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                 serverClass,
                 serverArgs,
                 "ranker");
-        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@start "+applicableHostPrefix);
         startupServer.sendEvent(this, quorumServer);
     }
 
