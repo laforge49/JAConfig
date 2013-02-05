@@ -108,6 +108,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     private void perform() throws Exception {
+        System.out.println("!");
         Iterator<String> vit = serverConfigs.keySet().iterator();
         while (vit.hasNext()) {
             String name = vit.next();
@@ -138,8 +139,9 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
 
     @Override
     public void serverNameAdded(String address, String name) throws Exception {
-        if (!name.startsWith(configPrefix))
+        if (!name.startsWith(configPrefix)) {
             return;
+        }
         if (name.length() <= configPrefix.length()) {
             logger.error("invalid server name (missing server name postfix): " + name);
             return;
@@ -156,6 +158,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             return;
         if (!serverConfigs.containsKey(name) || saddresses.size() > 1) {
             logger.warn("shutdown duplicate " + name + address);
+            restart.add(name);
             shutdown(name, address);
         }
     }
@@ -256,7 +259,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                     if (response != null) {
                         ServerEvalAgent serverEvalAgent = (ServerEvalAgent) node().factory().newActor(
                                 ServerEvalAgentFactory.fac.actorType, getMailbox());
-                        serverEvalAgent.configure("*" + serverName() + "*", null, "shutdown");
+                        serverEvalAgent.configure("*" + serverName() + "*", null, name + " shutdown");
                         (new ShipAgent(serverEvalAgent)).send(ClusterManager.this, response, new RP<Jid>() {
                             @Override
                             public void processResponse(Jid response) throws Exception {

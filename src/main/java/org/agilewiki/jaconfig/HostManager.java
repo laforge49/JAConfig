@@ -32,7 +32,6 @@ public class HostManager extends ClusterManager {
             applicableHostPrefix = applicableHostPrefix.substring(0, i + 1);
         }
         boolean a = address.startsWith(applicableHostPrefix);
-        System.out.println(address + " applicable " + a);
         return a;
     }
 }
