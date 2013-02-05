@@ -30,15 +30,17 @@ import org.agilewiki.jactor.lpc.Request;
 import org.agilewiki.jid.Jid;
 
 public class StartupServer extends Request<Jid, QuorumServer> {
-    StartupEntry startupEntry;
+    private final StartupEntry startupEntry;
 
     public StartupServer(
+            String applicableHostPrefix,
             String initiatingServerName,
             String serverName,
             String className,
             String serverArgs,
             String rankerName) {
         startupEntry = new StartupEntry(
+                applicableHostPrefix,
                 initiatingServerName,
                 serverName,
                 className,

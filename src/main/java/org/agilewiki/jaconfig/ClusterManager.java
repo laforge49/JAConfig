@@ -50,14 +50,21 @@ import java.util.Iterator;
 import java.util.TreeSet;
 
 public class ClusterManager extends ManagedServer implements ServerNameListener, ConfigListener {
-    public static Logger logger = LoggerFactory.getLogger(ClusterManager.class);
-
+    protected String applicableHostPrefix;
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
     private ConfigServer configServer;
     private String configPrefix;
     private HashMap<String, TreeSet<String>> serverAddresses = new HashMap<String, TreeSet<String>>();
     private HashMap<String, String> serverConfigs = new HashMap<String, String>();
     private HashSet<String> restart = new HashSet<String>();
     private boolean initialized;
+
+    protected boolean isApplicableHost(String address) throws Exception {
+        if (applicableHostPrefix == null) {
+            applicableHostPrefix = "";
+        }
+        return true;
+    }
 
     @Override
     protected void startManagedServer(final PrintJid out, final RP rp) throws Exception {
@@ -137,6 +144,8 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             logger.error("invalid server name (missing server name postfix): " + name);
             return;
         }
+        if (!isApplicableHost(address))
+            return;
         TreeSet<String> saddresses = serverAddresses.get(name);
         if (saddresses == null) {
             saddresses = new TreeSet<String>();
@@ -159,6 +168,8 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             logger.error("invalid server name (missing server name postfix): " + name);
             return;
         }
+        if (!isApplicableHost(address))
+            return;
         TreeSet<String> saddresses = serverAddresses.get(name);
         if (saddresses == null)
             return;
@@ -216,6 +227,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     private void startup(String name) throws Exception {
+        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@start "+name);
         String args = serverConfigs.get(name);
         String serverClass = args;
         String serverArgs = "";
@@ -224,12 +236,15 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             serverClass = args.substring(0, i);
             serverArgs = args.substring(i + 1).trim();
         }
+        isApplicableHost("");
         StartupServer startupServer = new StartupServer(
-                "*clusterManager*",
+                applicableHostPrefix,
+                "*" + serverName() + "*",
                 name,
                 serverClass,
                 serverArgs,
                 "ranker");
+        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@start "+applicableHostPrefix);
         startupServer.sendEvent(this, quorumServer);
     }
 
@@ -243,7 +258,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                     if (response != null) {
                         ServerEvalAgent serverEvalAgent = (ServerEvalAgent) node().factory().newActor(
                                 ServerEvalAgentFactory.fac.actorType, getMailbox());
-                        serverEvalAgent.configure("*clusterManager*", null, "shutdown");
+                        serverEvalAgent.configure("*" + serverName() + "*", null, "shutdown");
                         (new ShipAgent(serverEvalAgent)).send(ClusterManager.this, response, new RP<Jid>() {
                             @Override
                             public void processResponse(Jid response) throws Exception {

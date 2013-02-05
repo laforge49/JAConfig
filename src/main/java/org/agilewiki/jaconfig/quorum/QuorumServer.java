@@ -231,7 +231,14 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
                     public void processResponse(List<String> strings) throws Exception {
                         if (!quorum)
                             return;
-                        String address = strings.get(0);
+                        String address = null;
+                        int i = 0;
+                        while (address == null) {
+                            address = strings.get(i);
+                            if (!address.startsWith(startupEntry.applicableHostPrefix))
+                                address = null;
+                            i += 1;
+                        }
                         if (agentChannelManager().isLocalAddress(address)) {
                             localStartup(startupEntry);
                         } else {
@@ -281,25 +288,32 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     private void remoteStartup(final StartupEntry startupEntry, String address) throws Exception {
         (new GetAgentChannel(address)).send(this, agentChannelManager(), new RP<AgentChannel>() {
             @Override
-            public void processResponse(AgentChannel response) throws Exception {
-                if (!quorum)
+            public void processResponse(AgentChannel agentChannel) throws Exception {
+                if (!quorum) {
+                    processNextStartupEntry();
                     return;
-                if (response == null) {
+                }
+                if (agentChannel == null) {
                     ProcessStartupEntry.req.sendEvent(QuorumServer.this, QuorumServer.this);
+                    processNextStartupEntry();
                     return;
                 }
                 StartupAgent startupAgent = (StartupAgent) node().factory().newActor(
                         StartupAgentFactory.fac.actorType, getMailbox());
+                try {
                 startupAgent.configure(
                         startupEntry.initiatingServerName,
                         null,
                         startupEntry.className + " " + startupEntry.serverName + " " + startupEntry.serverArgs);
-                (new ShipAgent(startupAgent)).send(QuorumServer.this, response, new RP<Jid>() {
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+                (new ShipAgent(startupAgent)).send(QuorumServer.this, agentChannel, new RP<Jid>() {
                     @Override
-                    public void processResponse(Jid response) throws Exception {
+                    public void processResponse(Jid jidResponse) throws Exception {
                         if (!quorum)
                             return;
-                        PrintJid out = (PrintJid) response;
+                        PrintJid out = (PrintJid) jidResponse;
                         StringBuilder sb = new StringBuilder();
                         sb.append(startupEntry.serverName + ":\n");
                         out.appendto(sb);

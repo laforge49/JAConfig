@@ -140,7 +140,6 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
             clusterManagers.add(address);
             perform();
         } else if ("hostManager".equals(name) && isLocalHost(address)) {
-            System.out.println("adding host manager "+address);
             hostManagers.add(address);
             perform();
         }
@@ -164,7 +163,6 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
 
     @Override
     public void quorum(boolean status) throws Exception {
-        System.out.println(">>>>>>>>>>>>>>>>>>>>>>>>>quorum="+status);
         quorum = status;
         perform();
     }
@@ -235,17 +233,12 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         }
         if (clusterManagers.size() != 1) {
             if (clusterManagers.isEmpty()) {
-                System.out.println("need cluster manager "+ clusterKingmakers.isEmpty()+agentChannelManager().isLocalAddress(clusterKingmakers.first()));
                 if (clusterKingmakers.isEmpty() || agentChannelManager().isLocalAddress(clusterKingmakers.first())) {
-                    System.out.println("starting cluster manager here");
                     startClusterManager();
                 }
             } else {
-                System.out.println("too many cluster managers");
                 if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
-                    System.out.println("cluster manager running here");
                     if (!agentChannelManager().isLocalAddress(clusterManagers.last())) {
-                        System.out.println("closing largest address");
                         clusterManager.close();
                     }
                 }
@@ -253,9 +246,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         }
         if (hostManagers.size() != 1) {
             if (hostManagers.isEmpty()) {
-                System.out.println("need host manager "+ hostKingmakers.isEmpty()+agentChannelManager().isLocalAddress(hostKingmakers.first()));
                 if (hostKingmakers.isEmpty() || agentChannelManager().isLocalAddress(hostKingmakers.first())) {
-                    System.out.println("starting host manager here");
                     startHostManager();
                 }
             } else {
