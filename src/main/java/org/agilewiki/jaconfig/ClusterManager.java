@@ -59,6 +59,11 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     private HashSet<String> restart = new HashSet<String>();
     private boolean initialized;
 
+    @Override
+    protected boolean isClusterServer() {
+        return true;
+    }
+
     protected boolean isApplicableHost(String address) throws Exception {
         if (applicableHostPrefix == null) {
             applicableHostPrefix = "";
@@ -67,7 +72,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     @Override
-    protected void startManagedServer(final PrintJid out, final RP rp) throws Exception {
+    protected void startServer(final PrintJid out, final RP rp) throws Exception {
         configPrefix = serverName() + ".";
         (new GetLocalServer("config")).send(this, agentChannelManager(), new RP<Server>() {
             @Override
@@ -81,7 +86,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
                                         send(ClusterManager.this, agentChannelManager(), new RP<Boolean>() {
                                             @Override
                                             public void processResponse(Boolean response) throws Exception {
-                                                ClusterManager.super.startManagedServer(out, new RP() {
+                                                ClusterManager.super.startServer(out, new RP() {
                                                     @Override
                                                     public void processResponse(Object response) throws Exception {
                                                         initialized = true;
@@ -108,7 +113,6 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
     }
 
     private void perform() throws Exception {
-        System.out.println("!");
         Iterator<String> vit = serverConfigs.keySet().iterator();
         while (vit.hasNext()) {
             String name = vit.next();
@@ -281,7 +285,7 @@ public class ClusterManager extends ManagedServer implements ServerNameListener,
             @Override
             public void processResponse(Server response) throws Exception {
                 if (response != null)
-                    ((ManagedServer) response).close();
+                    ((Server) response).close();
             }
         });
     }

@@ -32,9 +32,11 @@ import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.jid.PrintJid;
 import org.agilewiki.jasocket.server.Server;
 
-public class ManagedServer extends Server implements QuorumListener {
+abstract public class ManagedServer extends Server implements QuorumListener {
     protected QuorumServer quorumServer;
-    protected boolean quorum = true;
+    protected boolean runnable = true;
+
+    abstract protected boolean isClusterServer();
 
     @Override
     public String startupArgs() {
@@ -60,23 +62,21 @@ public class ManagedServer extends Server implements QuorumListener {
             @Override
             public void processResponse(Server response) throws Exception {
                 quorumServer = (QuorumServer) response;
-                (new SubscribeQuorum(ManagedServer.this)).sendEvent(ManagedServer.this, quorumServer);
-                startManagedServer(out, rp);
+                if (isClusterServer())
+                    (new SubscribeQuorum(ManagedServer.this)).sendEvent(ManagedServer.this, quorumServer);
+                ManagedServer.super.startServer(out, rp);
             }
         });
     }
 
-    protected void startManagedServer(PrintJid out, RP rp) throws Exception {
-        super.startServer(out, rp);
-    }
-
     @Override
     public void close() {
-        try {
-            (new UnsubscribeQuorum(this)).sendEvent(this, quorumServer);
-        } catch (Exception ex) {
-        }
-        quorum = false;
+        if (isClusterServer())
+            try {
+                (new UnsubscribeQuorum(this)).sendEvent(this, quorumServer);
+            } catch (Exception ex) {
+            }
+        runnable = false;
         super.close();
     }
 

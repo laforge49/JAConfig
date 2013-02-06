@@ -23,21 +23,9 @@
  */
 package org.agilewiki.jaconfig;
 
-public class HostManager extends ClusterManager {
-
+public class ClusterServer extends ManagedServer {
     @Override
     protected boolean isClusterServer() {
-        return false;
-    }
-
-    @Override
-    protected boolean isApplicableHost(String address) throws Exception {
-        if (applicableHostPrefix == null) {
-            applicableHostPrefix = agentChannelManager().agentChannelManagerAddress();
-            int i = applicableHostPrefix.indexOf(':');
-            applicableHostPrefix = applicableHostPrefix.substring(0, i + 1);
-        }
-        boolean a = address.startsWith(applicableHostPrefix);
-        return a;
+        return true;
     }
 }

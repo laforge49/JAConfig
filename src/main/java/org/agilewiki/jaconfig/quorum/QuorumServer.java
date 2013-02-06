@@ -24,7 +24,6 @@
 package org.agilewiki.jaconfig.quorum;
 
 import org.agilewiki.jaconfig.JACNode;
-import org.agilewiki.jaconfig.ManagedServer;
 import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jaconfig.db.SubscribeConfig;
 import org.agilewiki.jaconfig.db.UnsubscribeConfig;
@@ -262,7 +261,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         }
         final Class<Server> serverClass = sc;
         Node node = agentChannelManager().node;
-        ManagedServer managedServer = (ManagedServer) node.initializeServer(serverClass);
+        Server server = (Server) node.initializeServer(serverClass);
         final PrintJid out = (PrintJid) node().factory().newActor(
                 JASocketFactories.PRINT_JID_FACTORY,
                 node().mailboxFactory().createMailbox());
@@ -271,7 +270,7 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
                 startupEntry.initiatingServerName,
                 startupEntry.serverName + " " + startupEntry.serverArgs,
                 out);
-        startup.send(this, managedServer, new RP<PrintJid>() {
+        startup.send(this, server, new RP<PrintJid>() {
             @Override
             public void processResponse(PrintJid response) throws Exception {
                 if (!quorum)
