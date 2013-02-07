@@ -261,7 +261,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
         try {
             node.process();
             node.startup(ConfigServer.class, "");
-            node.startup(SimpleRanker.class, "");
+            node.startup(SimpleRanker.class, "ranker");
             node.startup(QuorumServer.class, "kingmaker");
             node.startup(KingmakerServer.class, ClusterManager.class.getName() + " " + HostManager.class.getName());
             if (args.length == 0)

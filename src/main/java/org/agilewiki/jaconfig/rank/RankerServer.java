@@ -36,8 +36,21 @@ abstract public class RankerServer extends Server {
     abstract public void ranking(String serverName, RP<List<String>> rp) throws Exception;
 
     @Override
+    public String startupArgs() {
+        int i = super.startupArgs().indexOf(" ");
+        if (i > -1) {
+            return super.startupArgs().substring(i + 1);
+        } else
+            return "";
+    }
+
+    @Override
     protected String serverName() {
-        return "ranker";
+        int i = super.startupArgs().indexOf(" ");
+        if (i > -1) {
+            return super.startupArgs().substring(0, i);
+        } else
+            return super.startupArgs();
     }
 
     protected void startServer(PrintJid out, RP rp) throws Exception {
