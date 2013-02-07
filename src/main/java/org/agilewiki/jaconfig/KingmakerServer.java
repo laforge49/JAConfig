@@ -23,19 +23,16 @@
  */
 package org.agilewiki.jaconfig;
 
-import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.quorum.QuorumListener;
 import org.agilewiki.jaconfig.quorum.QuorumServer;
 import org.agilewiki.jaconfig.quorum.SubscribeQuorum;
 import org.agilewiki.jaconfig.quorum.UnsubscribeQuorum;
-import org.agilewiki.jaconfig.rank.simple.SimpleRanker;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jasocket.JASocketFactories;
 import org.agilewiki.jasocket.cluster.GetLocalServer;
 import org.agilewiki.jasocket.cluster.SubscribeServerNameNotifications;
 import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
 import org.agilewiki.jasocket.jid.PrintJid;
-import org.agilewiki.jasocket.node.IntCon;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.server.Startup;
@@ -251,22 +248,6 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
                     }
                 }
             }
-        }
-    }
-
-    public static void main(String[] args) throws Exception {
-        Node node = new JACNode(args, 100);
-        try {
-            node.process();
-            node.startup(ConfigServer.class, "");
-            node.startup(SimpleRanker.class, "ranker");
-            node.startup(QuorumServer.class, "kingmaker");
-            node.startup(KingmakerServer.class, ClusterManager.class.getName() + " " + HostManager.class.getName());
-            if (args.length == 0)
-                (new IntCon()).create(node);
-        } catch (Exception ex) {
-            node.mailboxFactory().close();
-            throw ex;
         }
     }
 }

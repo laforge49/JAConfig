@@ -23,13 +23,9 @@
  */
 package org.agilewiki.jaconfig.rank.simple;
 
-import org.agilewiki.jaconfig.JACNode;
-import org.agilewiki.jaconfig.db.impl.ConfigServer;
 import org.agilewiki.jaconfig.rank.RankerServer;
 import org.agilewiki.jactor.RP;
 import org.agilewiki.jasocket.cluster.ServerNames;
-import org.agilewiki.jasocket.node.IntCon;
-import org.agilewiki.jasocket.node.Node;
 
 import java.util.*;
 
@@ -79,18 +75,5 @@ public class SimpleRanker extends RankerServer {
                 rp.processResponse(ranking);
             }
         });
-    }
-
-    public static void main(String[] args) throws Exception {
-        Node node = new JACNode(args, 100);
-        try {
-            node.process();
-            node.startup(ConfigServer.class, "");
-            node.startup(SimpleRanker.class, "");
-            (new IntCon()).create(node);
-        } catch (Exception ex) {
-            node.mailboxFactory().close();
-            throw ex;
-        }
     }
 }

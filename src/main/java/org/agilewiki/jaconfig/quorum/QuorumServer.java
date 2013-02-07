@@ -23,7 +23,6 @@
  */
 package org.agilewiki.jaconfig.quorum;
 
-import org.agilewiki.jaconfig.JACNode;
 import org.agilewiki.jaconfig.db.ConfigListener;
 import org.agilewiki.jaconfig.db.SubscribeConfig;
 import org.agilewiki.jaconfig.db.UnsubscribeConfig;
@@ -43,7 +42,6 @@ import org.agilewiki.jasocket.cluster.UnsubscribeServerNameNotifications;
 import org.agilewiki.jasocket.commands.StartupAgent;
 import org.agilewiki.jasocket.commands.StartupAgentFactory;
 import org.agilewiki.jasocket.jid.PrintJid;
-import org.agilewiki.jasocket.node.IntCon;
 import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
 import org.agilewiki.jasocket.server.Startup;
@@ -283,10 +281,10 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
                 StartupAgent startupAgent = (StartupAgent) node().factory().newActor(
                         StartupAgentFactory.fac.actorType, getMailbox());
                 try {
-                startupAgent.configure(
-                        startupEntry.initiatingServerName,
-                        null,
-                        startupEntry.className + " " + startupEntry.serverName + " " + startupEntry.serverArgs);
+                    startupAgent.configure(
+                            startupEntry.initiatingServerName,
+                            null,
+                            startupEntry.className + " " + startupEntry.serverName + " " + startupEntry.serverArgs);
                 } catch (Exception ex) {
                     ex.printStackTrace();
                 }
@@ -308,18 +306,5 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     private void processNextStartupEntry() throws Exception {
         startupQueue.removeFirst();
         ProcessStartupEntry.req.sendEvent(this, this);
-    }
-
-    public static void main(String[] args) throws Exception {
-        Node node = new JACNode(args, 100);
-        try {
-            node.process();
-            node.startup(ConfigServer.class, "");
-            node.startup(QuorumServer.class, "quorum");
-            (new IntCon()).create(node);
-        } catch (Exception ex) {
-            node.mailboxFactory().close();
-            throw ex;
-        }
     }
 }

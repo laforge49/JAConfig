@@ -23,9 +23,6 @@
  */
 package org.agilewiki.jaconfig;
 
-import org.agilewiki.jaconfig.db.impl.ConfigServer;
-import org.agilewiki.jasocket.node.IntCon;
-import org.agilewiki.jasocket.node.Node;
 import org.agilewiki.jasocket.server.Server;
 
 public class NodeId extends Server {
@@ -36,18 +33,5 @@ public class NodeId extends Server {
             return "node." + args[1];
         } else
             return "node.default";
-    }
-
-    public static void main(String[] args) throws Exception {
-        Node node = new JACNode(args, 100);
-        try {
-            node.process();
-            node.startup(ConfigServer.class, "");
-            node.startup(NodeId.class, "");
-            (new IntCon()).create(node);
-        } catch (Exception ex) {
-            node.mailboxFactory().close();
-            throw ex;
-        }
     }
 }

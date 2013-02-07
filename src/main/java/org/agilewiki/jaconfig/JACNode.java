@@ -24,6 +24,9 @@
 package org.agilewiki.jaconfig;
 
 import org.agilewiki.jaconfig.db.impl.ConfigServer;
+import org.agilewiki.jaconfig.quorum.QuorumServer;
+import org.agilewiki.jaconfig.rank.simple.SimpleRanker;
+import org.agilewiki.jasocket.node.IntCon;
 import org.agilewiki.jasocket.node.Node;
 import org.apache.sshd.server.PasswordAuthenticator;
 
@@ -36,5 +39,21 @@ public class JACNode extends Node {
 
     public PasswordAuthenticator passwordAuthenticator() {
         return configServer;
+    }
+
+    public static void main(String[] args) throws Exception {
+        Node node = new JACNode(args, 100);
+        try {
+            node.process();
+            node.startup(ConfigServer.class, "");
+            node.startup(SimpleRanker.class, "ranker");
+            node.startup(QuorumServer.class, "kingmaker");
+            node.startup(KingmakerServer.class, ClusterManager.class.getName() + " " + HostManager.class.getName());
+            if (args.length == 0)
+                (new IntCon()).create(node);
+        } catch (Exception ex) {
+            node.mailboxFactory().close();
+            throw ex;
+        }
     }
 }
