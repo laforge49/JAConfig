@@ -226,9 +226,7 @@ public class KingmakerServer extends Server implements ServerNameListener, Quoru
             if (clusterManagers.contains(agentChannelManager().agentChannelManagerAddress())) {
                 clusterManager.close();
             }
-            return;
-        }
-        if (clusterManagers.size() != 1) {
+        } else if (clusterManagers.size() != 1) {
             if (clusterManagers.isEmpty()) {
                 if (clusterKingmakers.isEmpty() || agentChannelManager().isLocalAddress(clusterKingmakers.first())) {
                     startClusterManager();

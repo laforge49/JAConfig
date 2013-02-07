@@ -173,8 +173,6 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     }
 
     public void setQuorum(boolean quorum) throws Exception {
-        if (!quorum)
-            startupQueue.clear();
         this.quorum = quorum;
         logger.info("quorum: " + quorum + " hosts=" + hosts.size() + " quorum=" + (totalHostCount / 2 + 1));
         Iterator<QuorumListener> it = listeners.iterator();
@@ -185,8 +183,6 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     }
 
     public void startupServer(StartupEntry startupEntry) throws Exception {
-        if (!quorum)
-            return;
         startupQueue.addLast(startupEntry);
         if (startupQueue.size() > 1)
             return;
@@ -194,16 +190,13 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
     }
 
     void processStartupEntry() throws Exception {
-        if (!quorum)
-            return;
         if (startupQueue.size() == 0)
             return;
         final StartupEntry startupEntry = startupQueue.peekFirst();
         setExceptionHandler(new ExceptionHandler() {
             @Override
             public void process(Exception e) throws Exception {
-                if (!quorum)
-                    return;
+                logger.warn("unable to start " + startupEntry.className, e);
                 processNextStartupEntry();
                 startupEntry.rp.processResponse(e);
             }
@@ -212,8 +205,6 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         (new GetLocalServer(rankerName)).send(this, agentChannelManager(), new RP<Server>() {
             @Override
             public void processResponse(Server response) throws Exception {
-                if (!quorum)
-                    return;
                 if (response == null) {
                     PrintJid out = (PrintJid) JAFactory.newActor(
                             QuorumServer.this,
@@ -228,8 +219,6 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
                 (new Ranking(startupEntry.serverName)).send(QuorumServer.this, rankerServer, new RP<List<String>>() {
                     @Override
                     public void processResponse(List<String> strings) throws Exception {
-                        if (!quorum)
-                            return;
                         String address = null;
                         int i = 0;
                         while (address == null) {
@@ -273,8 +262,6 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         startup.send(this, server, new RP<PrintJid>() {
             @Override
             public void processResponse(PrintJid response) throws Exception {
-                if (!quorum)
-                    return;
                 StringBuilder sb = new StringBuilder();
                 sb.append(serverClass.getName() + ":\n");
                 out.appendto(sb);
@@ -288,10 +275,6 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
         (new GetAgentChannel(address)).send(this, agentChannelManager(), new RP<AgentChannel>() {
             @Override
             public void processResponse(AgentChannel agentChannel) throws Exception {
-                if (!quorum) {
-                    processNextStartupEntry();
-                    return;
-                }
                 if (agentChannel == null) {
                     ProcessStartupEntry.req.sendEvent(QuorumServer.this, QuorumServer.this);
                     processNextStartupEntry();
@@ -310,8 +293,6 @@ public class QuorumServer extends Server implements ServerNameListener, ConfigLi
                 (new ShipAgent(startupAgent)).send(QuorumServer.this, agentChannel, new RP<Jid>() {
                     @Override
                     public void processResponse(Jid jidResponse) throws Exception {
-                        if (!quorum)
-                            return;
                         PrintJid out = (PrintJid) jidResponse;
                         StringBuilder sb = new StringBuilder();
                         sb.append(startupEntry.serverName + ":\n");
