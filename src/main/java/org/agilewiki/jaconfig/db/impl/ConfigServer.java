@@ -252,6 +252,29 @@ public class ConfigServer extends Server implements ServerNameListener, Password
         (new SubscribeServerNameNotifications(this)).sendEvent(this, agentChannelManager());
         ((JACNode) node()).configServer = this;
         super.startServer(out, rp);
+
+        /*
+        TimerTask tt = new TimerTask() {
+            boolean odd = true;
+
+            @Override
+            public void run() {
+                try {
+                    if (odd) {
+                        (new Assign("quorum.totalHostCount", System.currentTimeMillis(), "1")).
+                                sendEvent(ConfigServer.this);
+                        odd = false;
+                    } else {
+                        (new Assign("quorum.totalHostCount", System.currentTimeMillis(), "2")).
+                                sendEvent(ConfigServer.this);
+                        odd = true;
+                    }
+                } catch (Exception ex) {
+                }
+            }
+        };
+        getMailboxFactory().timer().scheduleAtFixedRate(tt, 5000, 100);
+        */
     }
 
     public boolean assign(String name, long timestamp, String value) throws Exception {
